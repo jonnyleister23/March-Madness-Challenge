@@ -895,9 +895,9 @@ function initBracket() {
 */
 // CORS proxy list — tries each one in order until one works
 const CORS_PROXIES = [
-  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   url => `https://api.codetabs.com/v1/proxy?quest=${url}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 
 async function corsUrl(url) {
