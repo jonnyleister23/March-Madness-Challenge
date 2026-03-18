@@ -1623,14 +1623,14 @@ function renderScoresPage() {
     if (isFirstFour) return true;
 
     // Regular tournament games
-    const homeMatch = REGIONS.some(r =>
-      DEFAULT_TEAMS[r].some(t => teamsMatch(game.home_team, t))
-    );
-    const awayMatch = REGIONS.some(r =>
-      DEFAULT_TEAMS[r].some(t => teamsMatch(game.away_team, t))
-    );
+    const allActiveTeams = [
+      ...Object.values(DEFAULT_TEAMS).flat(),
+      ...FIRST_FOUR.map(f => f.team1),
+      ...FIRST_FOUR.map(f => f.team2),
+    ];
+    const homeMatch = allActiveTeams.some(t => teamsMatch(game.home_team, t));
+    const awayMatch = allActiveTeams.some(t => teamsMatch(game.away_team, t));
     return homeMatch && awayMatch;
-  });
 
   const sorted = [...bracketGames].sort((a, b) => {
     const aLive = !a.completed && a.scores?.length > 0;
