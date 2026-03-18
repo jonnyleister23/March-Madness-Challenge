@@ -1768,11 +1768,14 @@ function showMsg(id, msg, type = 'muted') {
 }
 
 
-const APP_VERSION = 3; // bump this number whenever you change LOCKED_SPREADS
+const APP_VERSION = 3;
 loadState();
 if (state.version !== APP_VERSION) {
-  // Spreads updated — wipe bracket only, keep nothing
   localStorage.removeItem('mm_state');
+  // Force a hard reload to bust the PWA cache
+  if (!window.location.search.includes('v=' + APP_VERSION)) {
+    window.location.replace(window.location.pathname + '?v=' + APP_VERSION);
+  }
   state = {
     apiKey:     '2cc99c7f5440c3a09653dda72c99547f',
     players:    [],
