@@ -384,7 +384,8 @@ let lastSyncAttempt = 0;
    }
    ============================================================== */
 let state = {
-  apiKey:     '3b7b400634b43743600ad47a2b7b4328',
+  apiKey:     '',
+  lastOddsFetch: null,
   players:    [],
   draft:      {},
   ownership:  {},
@@ -928,7 +929,8 @@ async function fetchAndSync() {
   const now = Date.now();
 
   if (now - lastSyncAttempt < SYNC_COOLDOWN_MS) {
-    const secsLeft = Math.ceil((SYNC_COOLDOWN_MS - (now - lastSyncAttempt)) / 1000);
+    const remainingMs = SYNC_COOLDOWN_MS - (now - lastSyncAttempt);
+    const secsLeft = Math.ceil(remainingMs / 1000);
 
     const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
     btns.forEach(b => {
@@ -942,7 +944,7 @@ async function fetchAndSync() {
         b.textContent = '⟳ Sync';
         b.disabled = false;
       });
-    }, 1000);
+    }, remainingMs);
 
     return;
   }
@@ -956,16 +958,24 @@ async function fetchAndSync() {
   });
 
   try {
-    const oddsData = await apiGet({
-      type: 'odds',
-      regions: 'us',
-      markets: 'spreads',
-      oddsFormat: 'american',
-      bookmakers: 'draftkings'
-    });
+    const shouldFetchOdds =
+      !state.lastOddsFetch || (now - state.lastOddsFetch > 10 * 60 * 1000);
 
-    if (!Array.isArray(oddsData)) {
-      throw new Error(oddsData.message || 'Bad odds response');
+    if (shouldFetchOdds) {
+      const oddsData = await apiGet({
+        type: 'odds',
+        regions: 'us',
+        markets: 'spreads',
+        oddsFormat: 'american',
+        bookmakers: 'draftkings'
+      });
+
+      if (!Array.isArray(oddsData)) {
+        throw new Error(oddsData.message || 'Bad odds response');
+      }
+
+      matchSpreadsTobracket(oddsData);
+      state.lastOddsFetch = now;
     }
 
     const scoresData = await apiGet({
@@ -980,7 +990,6 @@ async function fetchAndSync() {
     state.scoresCache = scoresData;
     state.lastFetch = new Date().toISOString();
 
-    matchSpreadsTobracket(oddsData);
     matchScoresToBracket(scoresData);
 
     saveState();
@@ -1929,10 +1938,8 @@ loadHardcodedDraft();
 initSetup();      // build player inputs + draft table
 
 // If we already have an API key, connect and start auto-refresh
-if (state.apiKey) {
-  updateApiDot(true);
-  startAutoRefresh();
-}
+updateApiDot(true);
+startAutoRefresh();
 </script>
 </body>
 </html>
