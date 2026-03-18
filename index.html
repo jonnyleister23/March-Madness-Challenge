@@ -320,7 +320,8 @@ const R1_PAIRS = [
 // Human-readable round names — used in headers and logs
 const ROUND_NAMES = {1:'Round of 64',2:'Round of 32',3:'Sweet 16',4:'Elite Eight',5:'Final Four',6:'Championship'};
 
-
+const SYNC_COOLDOWN_MS = 30000; // 30 seconds
+let lastSyncAttempt = 0;
 /* ==============================================================
    2. STATE OBJECT
    ==============================================================
@@ -905,6 +906,30 @@ async function apiGet(params) {
 }
 
 async function fetchAndSync() {
+  const now = Date.now();
+
+  if (now - lastSyncAttempt < SYNC_COOLDOWN_MS) {
+    const secsLeft = Math.ceil((SYNC_COOLDOWN_MS - (now - lastSyncAttempt)) / 1000);
+
+    const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
+    btns.forEach(b => {
+      b.textContent = `⏳ ${secsLeft}s`;
+      b.disabled = true;
+    });
+
+    setTimeout(() => {
+      const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
+      btns.forEach(b => {
+        b.textContent = '⟳ Sync';
+        b.disabled = false;
+      });
+    }, 1000);
+
+    return;
+  }
+
+  lastSyncAttempt = now;
+
   const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
   btns.forEach(b => {
     b.textContent = '⟳ Syncing...';
@@ -1065,18 +1090,40 @@ function matchSpreadsTobracket(games) {
             matchup.spread = -homeSpread;
           }
 
-          // Lock each game's spread at 11am EDT on its game day
-          const now = new Date();
-          const nowET = new Date(now.getTime() + (-4 * 60 * 60 * 1000));
-          const gameDate = new Date(game.commence_time);
-          const gameDateET = new Date(gameDate.getTime() + (-4 * 60 * 60 * 1000));
-          
-          // Same calendar day in ET and past 11am ET
-          const sameDay = nowET.getUTCFullYear() === gameDateET.getUTCFullYear() &&
-                          nowET.getUTCMonth()    === gameDateET.getUTCMonth() &&
-                          nowET.getUTCDate()     === gameDateET.getUTCDate();
-          const lockPassed = sameDay && nowET.getUTCHours() >= 11;
+                   const now = new Date();
+          const gameTime = new Date(game.commence_time);
 
+          const etPartsNow = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            hour12: false
+          }).formatToParts(now);
+
+          const etPartsGame = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).formatToParts(gameTime);
+
+          const nowET = Object.fromEntries(etPartsNow.map(p => [p.type, p.value]));
+          const gameET = Object.fromEntries(etPartsGame.map(p => [p.type, p.value]));
+
+          const sameGameDayET =
+            nowET.year === gameET.year &&
+            nowET.month === gameET.month &&
+            nowET.day === gameET.day;
+
+          const afterLockTimeET = Number(nowET.hour) >= 11;
+          const lockPassed = sameGameDayET && afterLockTimeET;
+
+          // Always show the latest live spread in the UI until lock time
+          matchup.spread = t1isHome ? homeSpread : -homeSpread;
+
+          // Freeze the spread only until 11:00 AM ET on game day
           if (!lockPassed) {
             matchup.lockedSpread = matchup.spread;
           }
