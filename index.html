@@ -881,8 +881,10 @@ function initBracket() {
      3. Auto-process completed games (calculate coverage, advance winner)
    ============================================================== */
 
-async function apiGet(path) {
-  const res = await fetch(`/.netlify/functions/odds?path=${encodeURIComponent(path)}`, {
+async function apiGet(params) {
+  const qs = new URLSearchParams(params).toString();
+
+  const res = await fetch(`/.netlify/functions/odds?${qs}`, {
     signal: AbortSignal.timeout(10000)
   });
 
@@ -903,7 +905,6 @@ async function apiGet(path) {
 }
 
 async function fetchAndSync() {
-  // Update sync button state
   const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
   btns.forEach(b => {
     b.textContent = '⟳ Syncing...';
@@ -911,17 +912,22 @@ async function fetchAndSync() {
   });
 
   try {
-    const oddsData = await apiGet(
-      '/v4/sports/basketball_ncaab/odds/?regions=us&markets=spreads&oddsFormat=american&bookmakers=draftkings'
-    );
+    const oddsData = await apiGet({
+      type: 'odds',
+      regions: 'us',
+      markets: 'spreads',
+      oddsFormat: 'american',
+      bookmakers: 'draftkings'
+    });
 
     if (!Array.isArray(oddsData)) {
       throw new Error(oddsData.message || 'Bad odds response');
     }
 
-    const scoresData = await apiGet(
-      '/v4/sports/basketball_ncaab/scores/?daysFrom=3'
-    );
+    const scoresData = await apiGet({
+      type: 'scores',
+      daysFrom: '3'
+    });
 
     if (!Array.isArray(scoresData)) {
       throw new Error(scoresData.message || 'Bad scores response');
