@@ -894,31 +894,37 @@ function initBracket() {
 // CORS proxy list — tries each one in order until one works
 const CORS_PROXIES = [
   url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
   url => `https://api.codetabs.com/v1/proxy?quest=${url}`,
-  url => `https://thingproxy.freeboard.io/fetch/${url}`,
 ];
 
 async function corsUrl(url) {
   for (const proxy of CORS_PROXIES) {
     try {
-      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(8000) });
       if (!res.ok) continue;
       const text = await res.text();
-      // corsproxy.io returns raw JSON, others may wrap it
       try {
         const parsed = JSON.parse(text);
-        // allorigins-style wrapper: { contents: "..." }
-        if (parsed.contents) return JSON.parse(parsed.contents);
-        // codetabs returns parsed JSON directly
-        return parsed;
+        // allorigins wraps in { contents: "..." }
+        if (parsed.contents) {
+          const inner = JSON.parse(parsed.contents);
+          if (inner) return inner;
+          continue;
+        }
+        // corsproxy.io and codetabs return raw JSON array/object
+        if (Array.isArray(parsed) || (typeof parsed === 'object' && !parsed.error)) {
+          return parsed;
+        }
+        continue;
       } catch {
         continue;
       }
     } catch {
-      continue; // try next proxy
+      continue;
     }
   }
-  throw new Error('All proxies failed — check connection');
+  throw new Error('All proxies failed');
 }
 
 async function fetchAndSync() {
