@@ -145,6 +145,7 @@ tr:last-child td{border-bottom:none}
       <div class="card-title">Players (16)</div>
       <div class="player-grid" id="player-inputs"></div>
       <button class="btn-secondary btn-sm mt-3" onclick="clearPlayers()">Clear All</button>
+      <button class="btn-secondary btn-sm" onclick="alert('West R1: ' + state.bracket.West[1].map(m => m.team1.replace(/^\d+\s+/,'') + ' vs ' + m.team2.replace(/^\d+\s+/,'') + ' spread:' + m.spread + ' locked:' + m.lockedSpread).join('\n'))">🔍 Debug</button>
     </div>
     <div class="card">
       <div class="card-title">Regions</div>
