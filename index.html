@@ -1571,11 +1571,6 @@ function renderLeaderboard() {
           </td>
         `).join('')}
         <td><span class="lb-score">${row.rounds}</span></td>
-        <td>
-          <span class="badge ${row.aliveCount > 0 ? 'badge-alive' : 'badge-out'}">
-            ${row.aliveCount > 0 ? 'Active' : 'Eliminated'}
-          </span>
-        </td>
       </tr>
       <tr id="lb-drop-${i}" style="display:none">
         <td colspan="8" style="padding:0 12px 10px 12px;background:var(--surface2)">
