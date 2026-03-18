@@ -881,74 +881,54 @@ function initBracket() {
      3. Auto-process completed games (calculate coverage, advance winner)
    ============================================================== */
 
-/*
-  WHY WE USE A CORS PROXY:
-  The Odds API blocks direct browser fetch() calls due to CORS (a browser
-  security rule that prevents pages from calling external APIs directly).
-  The API is designed to be called from a server, not a webpage.
+async function apiGet(path) {
+  const res = await fetch(`/.netlify/functions/odds?path=${encodeURIComponent(path)}`, {
+    signal: AbortSignal.timeout(10000)
+  });
 
-  We route through allorigins.win — a free public CORS proxy.
-  It wraps the response: { contents: "<json string>", status: { http_code: 200 } }
+  const text = await res.text();
 
-  If the proxy is down, syncing will silently fail but the bracket still
-  works fine — you can always enter results manually by tapping a matchup.
-*/
-// CORS proxy list — tries each one in order until one works
-const CORS_PROXIES = [
-  url => `https://api.codetabs.com/v1/proxy?quest=${url}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://thingproxy.freeboard.io/fetch/${url}`,
-];
-
-async function corsUrl(url) {
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) continue;
-      const text = await res.text();
-      try {
-        const parsed = JSON.parse(text);
-        // allorigins wraps in { contents: "..." }
-        if (parsed.contents) {
-          const inner = JSON.parse(parsed.contents);
-          if (inner) return inner;
-          continue;
-        }
-        // corsproxy.io and codetabs return raw JSON array/object
-        if (Array.isArray(parsed) || (typeof parsed === 'object' && !parsed.error)) {
-          return parsed;
-        }
-        continue;
-      } catch {
-        continue;
-      }
-    } catch {
-      continue;
-    }
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid server response: ${text}`);
   }
-  throw new Error('All proxies failed');
+
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed with status ${res.status}`);
+  }
+
+  return data;
 }
 
 async function fetchAndSync() {
-  if (!state.apiKey) return; // silently skip if no key
-
   // Update sync button state
   const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
-  btns.forEach(b => { b.textContent = '⟳ Syncing...'; b.disabled = true; });
-
-  const oddsUrl = `https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/?apiKey=${state.apiKey}&regions=us&markets=spreads&oddsFormat=american&bookmakers=draftkings`;
-  const scoresUrl = `https://api.the-odds-api.com/v4/sports/basketball_ncaab/scores/?apiKey=${state.apiKey}&daysFrom=3`;
+  btns.forEach(b => {
+    b.textContent = '⟳ Syncing...';
+    b.disabled = true;
+  });
 
   try {
-    // Fetch spreads through proxy
-    const oddsData = await corsUrl(oddsUrl);
-    if (!Array.isArray(oddsData)) throw new Error(oddsData.message || 'Bad odds response');
+    const oddsData = await apiGet(
+      '/v4/sports/basketball_ncaab/odds/?regions=us&markets=spreads&oddsFormat=american&bookmakers=draftkings'
+    );
 
-    const scoresData = await corsUrl(scoresUrl);
-    if (!Array.isArray(scoresData)) throw new Error(scoresData.message || 'Bad scores response');
+    if (!Array.isArray(oddsData)) {
+      throw new Error(oddsData.message || 'Bad odds response');
+    }
+
+    const scoresData = await apiGet(
+      '/v4/sports/basketball_ncaab/scores/?daysFrom=3'
+    );
+
+    if (!Array.isArray(scoresData)) {
+      throw new Error(scoresData.message || 'Bad scores response');
+    }
 
     state.scoresCache = scoresData;
-    state.lastFetch   = new Date().toISOString();
+    state.lastFetch = new Date().toISOString();
 
     matchSpreadsTobracket(oddsData);
     matchScoresToBracket(scoresData);
@@ -960,20 +940,32 @@ async function fetchAndSync() {
     renderLeaderboard();
     updateLiveBadge();
 
-    // Show brief success state on button
-    btns.forEach(b => { b.textContent = '✓ Synced'; });
-    setTimeout(() => btns.forEach(b => { b.textContent = '⟳ Sync'; b.disabled = false; }), 2000);
+    btns.forEach(b => {
+      b.textContent = '✓ Synced';
+    });
+
+    setTimeout(() => {
+      btns.forEach(b => {
+        b.textContent = '⟳ Sync';
+        b.disabled = false;
+      });
+    }, 2000);
 
   } catch (err) {
-    // Log to console only — no popup alerts
     console.warn('Sync failed (enter results manually):', err.message);
-    btns.forEach(b => { b.textContent = '⟳ Sync'; b.disabled = false; });
-    // Show quiet error in scores page without disrupting bracket
+
+    btns.forEach(b => {
+      b.textContent = '⟳ Sync';
+      b.disabled = false;
+    });
+
     const grid = document.getElementById('scores-grid');
-    if (grid && !state.scoresCache?.length) grid.innerHTML = `
-      <div class="no-data">
-        Scores not yet available — tap Sync to retry.
-      </div>`;
+    if (grid && !state.scoresCache?.length) {
+      grid.innerHTML = `
+        <div class="no-data">
+          Scores not yet available — tap Sync to retry.
+        </div>`;
+    }
   }
 }
 
