@@ -13,24 +13,35 @@ export default async (req, context) => {
     }
 
     const url = new URL(req.url);
-    const path = url.searchParams.get('path');
 
-    if (!path) {
-      return new Response(
-        JSON.stringify({ error: 'Missing path parameter' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+    const type = url.searchParams.get('type') || 'odds';
+
+    let targetUrl;
+
+    if (type === 'scores') {
+      const daysFrom = url.searchParams.get('daysFrom') || '3';
+
+      targetUrl =
+        `https://api.the-odds-api.com/v4/sports/basketball_ncaab/scores/` +
+        `?apiKey=${encodeURIComponent(apiKey)}` +
+        `&daysFrom=${encodeURIComponent(daysFrom)}`;
+    } else {
+      const regions = url.searchParams.get('regions') || 'us';
+      const markets = url.searchParams.get('markets') || 'spreads';
+      const oddsFormat = url.searchParams.get('oddsFormat') || 'american';
+      const bookmakers = url.searchParams.get('bookmakers') || 'draftkings';
+
+      targetUrl =
+        `https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/` +
+        `?apiKey=${encodeURIComponent(apiKey)}` +
+        `&regions=${encodeURIComponent(regions)}` +
+        `&markets=${encodeURIComponent(markets)}` +
+        `&oddsFormat=${encodeURIComponent(oddsFormat)}` +
+        `&bookmakers=${encodeURIComponent(bookmakers)}`;
     }
 
-    const targetUrl = `https://api.the-odds-api.com${path}${path.includes('?') ? '&' : '?'}apiKey=${encodeURIComponent(apiKey)}`;
-
     const response = await fetch(targetUrl, {
-      headers: {
-        'Accept': 'application/json'
-      }
+      headers: { Accept: 'application/json' }
     });
 
     const text = await response.text();
