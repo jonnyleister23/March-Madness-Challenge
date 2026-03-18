@@ -1631,6 +1631,7 @@ function renderScoresPage() {
     const homeMatch = allActiveTeams.some(t => teamsMatch(game.home_team, t));
     const awayMatch = allActiveTeams.some(t => teamsMatch(game.away_team, t));
     return homeMatch && awayMatch;
+  });
 
   const sorted = [...bracketGames].sort((a, b) => {
     const aLive = !a.completed && a.scores?.length > 0;
