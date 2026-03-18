@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cover or Go Home">
+<meta name="theme-color" content="#0f1320">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Cover or Go Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080b12;--surface:#0f1320;--surface2:#161c2e;--border:#1e2740;
+  --accent:#e8a020;--accent2:#f0c060;--text:#e8eaf0;--muted:#5a6080;
+  --success:#22c55e;--danger:#ef4444;--info:#3b82f6;--live:#ff4444;
+  --east:#3b82f6;--west:#ef4444;--south:#e8a020;--midwest:#22c55e;
+  --safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;min-height:100vh;padding-bottom:calc(58px + var(--safe-b));-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+.top-header{background:var(--surface);border-bottom:1px solid var(--border);padding:calc(var(--safe-t) + 12px) 1rem 10px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent);letter-spacing:3px}
+.header-status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.api-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0}
+.api-dot.ok{background:var(--success)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--live);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.bottom-tabs{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--surface);border-top:1px solid var(--border);padding-bottom:var(--safe-b)}
+.bottom-tabs-inner{display:flex;height:56px}
+.btab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;transition:color .15s;-webkit-tap-highlight-color:transparent}
+.btab.active{color:var(--accent)}
+.btab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.page{display:none}
+.page.active{display:block}
+#page-bracket{display:none;flex-direction:column}
+#page-bracket.active{display:flex;height:calc(100vh - 56px - var(--safe-b) - 57px)}
+.page-content{padding:.85rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.2rem;margin-bottom:1rem}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1.5px;color:var(--accent);margin-bottom:.75rem}
+button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;border-radius:10px;font-size:14px;font-weight:600;padding:.6rem 1.2rem;transition:all .15s;min-height:44px;-webkit-tap-highlight-color:transparent}
+.btn-primary{background:var(--accent);color:#000}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-sm{padding:.35rem .8rem;font-size:12px;min-height:36px}
+.btn-full{width:100%}
+input,select{background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.6rem .8rem;width:100%;min-height:44px;-webkit-appearance:none}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px}
+.info-box{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:.75rem 1rem;font-size:13px;color:#93c5fd;margin-bottom:1rem}
+.warn-box{background:rgba(232,160,32,.08);border:1px solid rgba(232,160,32,.25);border-radius:10px;padding:.75rem 1rem;font-size:13px;color:#fcd34d;margin-bottom:1rem}
+.badge{display:inline-block;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600}
+.badge-alive{background:rgba(34,197,94,.15);color:var(--success)}
+.badge-out{background:rgba(239,68,68,.15);color:var(--danger)}
+.badge-tbd{background:rgba(90,96,128,.15);color:var(--muted)}
+.badge-live{background:rgba(255,68,68,.2);color:#ff8080;animation:pulse 1.5s infinite}
+.badge-final{background:rgba(34,197,94,.15);color:var(--success)}
+.text-muted{color:var(--muted)}.text-sm{font-size:13px}.text-xs{font-size:11px}
+.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-accent{color:var(--accent)}
+.bold{font-weight:600}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}
+.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mt-3{margin-top:.75rem}
+.no-data{color:var(--muted);text-align:center;padding:2rem;font-size:14px}
+hr{border:none;border-top:1px solid var(--border);margin:1rem 0}
+.player-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.player-row{display:grid;grid-template-columns:1.4rem 1fr;gap:6px;align-items:center}
+.player-num{font-size:12px;color:var(--muted);text-align:right;font-weight:600}
+.draft-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--surface2);color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.8px;padding:.55rem .75rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+/* BRACKET */
+.round-tabs{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none}
+.round-tabs::-webkit-scrollbar{display:none}
+.round-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--muted);transition:all .15s;min-height:32px;-webkit-tap-highlight-color:transparent}
+.round-pill.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.bracket-outer{flex:1;overflow:hidden;position:relative}
+.bracket-rounds-track{display:flex;height:100%;transition:transform .32s cubic-bezier(.4,0,.2,1);will-change:transform}
+.bracket-round-panel{min-width:100%;width:100%;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px 16px;flex-shrink:0}
+.region-section{margin-bottom:20px}
+.region-header-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.region-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.region-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px}
+.matchup-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;cursor:pointer}
+.matchup-card:active{border-color:var(--accent)}
+.team-row{display:flex;align-items:center;padding:10px 12px;gap:10px;min-height:50px}
+.team-row+.team-row{border-top:1px solid var(--border)}
+.seed-badge{width:24px;height:24px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0}
+.team-info{flex:1;min-width:0}
+.team-name-txt{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-owner-txt{font-size:11px;color:var(--muted)}
+.team-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.spread-chip{font-size:12px;font-weight:700;color:var(--accent)}
+.score-chip{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.5px}
+.score-chip.live{color:var(--live)}.score-chip.final{color:var(--text)}
+.team-row.won .team-name-txt{color:var(--success)}
+.team-row.lost .team-name-txt{color:var(--danger);text-decoration:line-through;opacity:.7}
+.matchup-footer{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--surface2);font-size:11px;color:var(--muted)}
+.tbd-card{background:var(--surface);border:1px dashed var(--border);border-radius:12px;padding:14px 12px;font-size:13px;color:var(--muted);margin-bottom:8px;text-align:center}
+/* SCORES */
+.scores-grid{display:flex;flex-direction:column;gap:.75rem}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem}
+.score-card.live-game{border-color:rgba(255,68,68,.4)}.score-card.final-game{border-color:rgba(34,197,94,.2)}
+.score-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.score-row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--border)}
+.score-row:last-child{border-bottom:none}
+.score-team{font-size:14px;font-weight:600}
+.score-pts{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px}
+/* LEADERBOARD */
+.lb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--muted)}
+.lb-rank.top3{color:var(--accent)}
+.lb-score{font-family:'Bebas Neue',sans-serif;font-size:1.1rem}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:1.25rem 1.25rem calc(1.25rem + var(--safe-b));width:100%;max-width:480px}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:2px;margin-bottom:.75rem}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.modal-actions{display:flex;gap:8px;margin-top:.75rem}
+.modal-actions button{flex:1}
+.preview-box{background:var(--surface2);border-radius:8px;padding:.75rem;font-size:13px;margin-bottom:.75rem;display:none;line-height:1.8}
+</style>
+</head>
+<body>
+
+<div class="top-header" style="position:relative">
+  <div style="position:absolute;left:50%;transform:translateX(-50%);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--accent)">COVER OR GO HOME</div>
+  <div class="header-status">
+    <span id="live-badge" style="display:none;align-items:center;gap:4px">
+      <span class="live-dot"></span>
+      <span style="color:#ff8080;font-weight:600">LIVE</span>
+    </span>
+    <span class="api-dot" id="api-dot"></span>
+    <span id="api-status">No key</span>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="page" id="page-setup">
+  <div class="page-content">
+    <div style="margin-bottom:1rem">
+      <h1 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px">Setup</h1>
+      <p class="text-muted text-sm">Fill this out once before the tournament starts.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Players (16)</div>
+      <div class="player-grid" id="player-inputs"></div>
+      <button class="btn-secondary btn-sm mt-3" onclick="clearPlayers()">Clear All</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Regions</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.75rem">
+        <div style="padding:.6rem;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:13px;font-weight:600;color:var(--east)">East</div>
+        <div style="padding:.6rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:13px;font-weight:600;color:var(--west)">West</div>
+        <div style="padding:.6rem;background:rgba(232,160,32,.08);border:1px solid rgba(232,160,32,.2);border-radius:8px;font-size:13px;font-weight:600;color:var(--south)">South</div>
+        <div style="padding:.6rem;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:13px;font-weight:600;color:var(--midwest)">Midwest</div>
+      </div>
+      <p class="text-sm text-muted"><strong class="text-accent">Rule:</strong> Your team must cover the spread to advance. Fail = opponent steals your team.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Team Draft</div>
+      <div class="warn-box">Assign 1 team per player per region. Scroll right to see all regions.</div>
+      <div class="draft-wrap">
+        <table id="draft-table">
+          <thead><tr><th>Player</th><th style="color:var(--east)">East</th><th style="color:var(--west)">West</th><th style="color:var(--south)">South</th><th style="color:var(--midwest)">Midwest</th></tr></thead>
+          <tbody id="draft-tbody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:1rem">
+        <button class="btn-primary btn-full" onclick="saveDraft()">💾 Save Draft &amp; Start</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary btn-sm" style="flex:1" onclick="loadSampleData()">Sample</button>
+          <button class="btn-secondary btn-sm" style="flex:1" onclick="exportData()">Export</button>
+          <button class="btn-secondary btn-sm" style="flex:1" onclick="document.getElementById('import-file').click()">Import</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        </div>
+      </div>
+      <p id="save-msg" class="text-sm mt-3"></p>
+    </div>
+  </div>
+</div>
+
+<!-- BRACKET -->
+<div class="page" id="page-bracket">
+  <div class="round-tabs" id="round-tabs">
+    <div class="round-pill active" data-round="1" onclick="selectRound(1)">Round of 64</div>
+    <div class="round-pill" data-round="2" onclick="selectRound(2)">Round of 32</div>
+    <div class="round-pill" data-round="3" onclick="selectRound(3)">Sweet 16</div>
+    <div class="round-pill" data-round="4" onclick="selectRound(4)">Elite 8</div>
+    <div class="round-pill" data-round="5" onclick="selectRound(5)">Final Four</div>
+    <div class="round-pill" data-round="6" onclick="selectRound(6)">Championship</div>
+  </div>
+  <div class="bracket-outer" id="bracket-outer">
+    <div class="bracket-rounds-track" id="bracket-track"></div>
+  </div>
+</div>
+
+<!-- SCORES -->
+<div class="page" id="page-scores">
+  <div class="page-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div>
+        <h1 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px">Live Scores</h1>
+        <p class="text-muted text-sm">Auto-updates every 30 seconds.</p>
+      </div>
+      <button class="btn-secondary btn-sm" onclick="fetchAndSync()">⟳ Sync</button>
+    </div>
+    <div class="scores-grid" id="scores-grid"><div class="no-data">Add your API key in Setup.</div></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="page active" id="page-leaderboard">
+  <div class="page-content">
+    <div style="margin-bottom:1rem">
+      <h1 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px">Standings</h1>
+      <p class="text-muted text-sm">Ranked by regions alive, then rounds won.</p>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="lb-wrap">
+        <table style="width:100%;min-width:340px">
+          <thead><tr><th style="width:32px">#</th><th>Player</th><th>Alive</th><th>E</th><th>W</th><th>S</th><th>M</th><th>Wins</th></tr></thead>
+          <tbody id="lb-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="result-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Enter Result</div>
+    <div id="modal-info" style="font-size:13px;margin-bottom:.75rem;color:var(--muted)"></div>
+    <div class="modal-grid">
+      <div><label id="label-score1">Team 1</label><input type="number" id="score1" placeholder="0" min="0" inputmode="numeric" oninput="previewResult()"></div>
+      <div><label id="label-score2">Team 2</label><input type="number" id="score2" placeholder="0" min="0" inputmode="numeric" oninput="previewResult()"></div>
+    </div>
+    <div class="preview-box" id="modal-preview"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmResult()">Confirm →</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM TABS -->
+<div class="bottom-tabs">
+  <div class="bottom-tabs-inner">
+    <div class="btab" id="btab-bracket" onclick="showPage('bracket')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="6" height="4" rx="1"/><rect x="2" y="10" width="6" height="4" rx="1"/><rect x="2" y="17" width="6" height="4" rx="1"/><path d="M8 5h4v12H8"/><rect x="16" y="9" width="6" height="6" rx="1"/><path d="M12 12h4"/></svg>
+      <span>Bracket</span>
+    </div>
+    <div class="btab" id="btab-scores" onclick="showPage('scores')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span>Scores</span>
+    </div>
+    <div class="btab active" id="btab-leaderboard" onclick="showPage('leaderboard')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="14" width="5" height="7" rx="1"/><rect x="9" y="9" width="5" height="12" rx="1"/><rect x="16" y="4" width="5" height="17" rx="1"/></svg>
+      <span>Standings</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==============================================================
+   1. DATA & CONSTANTS
+   ==============================================================
+   DEFAULT_TEAMS: the 16 seeded teams for each region.
+   Format: "seed schoolName" — the seed prefix helps with
+   sorting and display but isn't parsed programmatically.
+
+   TO CUSTOMIZE: Update these arrays to match the actual
+   tournament bracket each year. Seeds 1-16, listed 1 through 16.
+   ============================================================== */
+const REGIONS = ['East', 'South', 'West', 'Midwest'];
+
+const DEFAULT_TEAMS = {
+  East: [
+    '1 Duke',          '2 UConn',          '3 Michigan St',    '4 Kansas',
+    '5 St Johns',      '6 Louisville',      '7 UCLA',           '8 Ohio St',
+    '9 TCU',           '10 UCF',            '11 South Florida', '12 Northern Iowa',
+    '13 Cal Baptist',  '14 North Dakota St','15 Furman',        '16 Siena'
+  ],
+  South: [
+    '1 Florida',       '2 Houston',         '3 Illinois',       '4 Nebraska',
+    '5 Vanderbilt',    '6 North Carolina',  '7 Saint Marys',    '8 Clemson',
+    '9 Iowa',          '10 Texas A&M',      '11 VCU',           '12 McNeese',
+    '13 Troy',         '14 Penn',           '15 Idaho',         '16 Prairie View'
+  ],
+  West: [
+    '1 Arizona',       '2 Purdue',          '3 Gonzaga',        '4 Arkansas',
+    '5 Wisconsin',     '6 BYU',             '7 Miami FL',       '8 Villanova',
+    '9 Utah St',       '10 Missouri',       '11 NC State',      '12 High Point',
+    '13 Hawaii',       '14 Kennesaw St',    '15 Queens',        '16 LIU'
+  ],
+  Midwest: [
+    '1 Michigan',      '2 Iowa St',         '3 Virginia',       '4 Alabama',
+    '5 Texas Tech',    '6 Tennessee',       '7 Kentucky',       '8 Georgia',
+    '9 Saint Louis',   '10 Santa Clara',    '11 SMU',           '12 Akron',
+    '13 Hofstra',      '14 Wright St',      '15 Tennessee St',  '16 Howard'
+  ]
+};
+
+// Order matches NCAA bracket layout — grouped by R2 matchups
+// [seed-1 index, seed-2 index] (0-based, so seed 1 = index 0, seed 8 = index 7, etc.)
+const R1_PAIRS = [
+  [0,15],  // 1 vs 16
+  [7,8],   // 8 vs 9
+  [4,11],  // 5 vs 12
+  [3,12],  // 4 vs 13
+  [5,10],  // 6 vs 11
+  [2,13],  // 3 vs 14
+  [6,9],   // 7 vs 10
+  [1,14],  // 2 vs 15
+];
+
+// Human-readable round names — used in headers and logs
+const ROUND_NAMES = {1:'Round of 64',2:'Round of 32',3:'Sweet 16',4:'Elite Eight',5:'Final Four',6:'Championship'};
+
+
+/* ==============================================================
+   2. STATE OBJECT
+   ==============================================================
+   This is the single source of truth for the entire app.
+   Everything gets saved to localStorage on every change.
+
+   Shape:
+   {
+     apiKey: string,
+
+     players: [{name: string}],
+
+     draft: {
+       "PlayerName": { East: "1 Duke", West: "3 Iowa St", ... }
+     },
+
+     // Who currently owns each team in each region.
+     // Changes when a team is "stolen" after a loss.
+     ownership: {
+       "East": { "1 Duke": "PlayerName", "9 Baylor": "OtherPlayer", ... }
+     },
+
+     // Which players have been eliminated from which region.
+     // They stay eliminated from that region but still compete in others.
+     eliminated: {
+       "East": ["PlayerName", ...],   // stored as array, revived as Set
+       ...
+     },
+
+     // Counts how many rounds each player's teams have won (across all regions)
+     roundsWon: { "PlayerName": 3, ... },
+
+     // The bracket: region → round → array of matchup objects
+     bracket: {
+       "East": {
+         1: [
+           {
+             team1: "1 Duke",
+             team2: "16 American",
+             spread: -18.5,       // team1's spread (negative = team1 favored)
+             result: null | { score1, score2, winner },
+             gameId: "api-game-id" // matched from API for live score syncing
+           },
+           ...
+         ],
+         2: [...],
+         ...
+       }
+     },
+
+     // Raw API response cache for the scores page
+     scoresCache: [],
+
+     // Timestamp of last successful API fetch
+     lastFetch: null
+   }
+   ============================================================== */
+let state = {
+  apiKey:     '2cc99c7f5440c3a09653dda72c99547f',
+  players:    [],
+  draft:      {},
+  ownership:  {},
+  eliminated: {},
+  roundsWon:  {},
+  bracket:    {},
+  scoresCache:[],
+  lastFetch:  null,
+};
+
+
+/* ==============================================================
+   STATE PERSISTENCE
+   saveState() → JSON.stringify → localStorage
+   loadState() → JSON.parse → restore (revive Sets)
+
+   The 'replacer' converts Set → Array for JSON serialization,
+   since JSON.stringify can't handle Set natively.
+   ============================================================== */
+function saveState() {
+  localStorage.setItem('mm_state', JSON.stringify(state, (k, v) => v instanceof Set ? [...v] : v));
+}
+
+function loadState() {
+  const raw = localStorage.getItem('mm_state');
+  if (!raw) return;
+  const s = JSON.parse(raw);
+  // Revive Sets: eliminated is stored as arrays but used as Sets
+  if (s.eliminated) {
+    Object.keys(s.eliminated).forEach(r => {
+      s.eliminated[r] = new Set(s.eliminated[r]);
+    });
+  }
+  Object.assign(state, s);
+}
+
+
+/* ==============================================================
+   3. NAVIGATION
+   ============================================================== */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.btab').forEach(t => {
+    t.classList.toggle('active', t.id === 'btab-' + id);
+  });
+  if (id === 'bracket')     renderBracket();
+  if (id === 'leaderboard') renderLeaderboard();
+  if (id === 'scores')      renderScoresPage();
+}
+
+// First Four games — each entry defines the two teams playing for a bracket slot
+// winner automatically fills the TBD slot in that region
+const FIRST_FOUR = [
+  { game:'West-11',    team1:'11 Texas',        team2:'11 NC State',   region:'West',    bracketSlot:'11 NC State',    owner:'Carson V' },
+  { game:'South-16',   team1:'16 Prairie View',  team2:'16 Lehigh',     region:'South',   bracketSlot:'16 Prairie View', owner:'Ryder'    },
+  { game:'Midwest-11', team1:'11 SMU',           team2:'11 Miami OH',   region:'Midwest', bracketSlot:'11 SMU',         owner:'Jolly'    },
+  { game:'Midwest-16', team1:'16 UMBC',          team2:'16 Howard',     region:'Midwest', bracketSlot:'16 Howard',      owner:'Hopp'     },
+];
+/* ==============================================================
+   BRACKET CONSTANTS
+   ============================================================== */
+
+
+const REGION_COLORS = { East:'#3b82f6', West:'#ef4444', South:'#e8a020', Midwest:'#22c55e' };
+const ROUNDS_PER_SIDE = 4;
+
+// Current active round in bracket view
+let _currentRound = 1;
+
+/* ==============================================================
+   8. BRACKET RENDER — Mobile card layout
+   ==============================================================
+   Layout:
+   - Round pills at top (horizontally scrollable)
+   - Swipe left/right to change rounds
+   - Within each round: scroll vertically through all 4 regions
+   - Each matchup is a card showing both teams, seed, owner, spread, score
+   ============================================================== */
+
+function selectRound(round) {
+  _currentRound = round;
+  // Update pill active state
+  document.querySelectorAll('.round-pill').forEach(p => {
+    p.classList.toggle('active', parseInt(p.dataset.round) === round);
+  });
+  // Slide the track to the correct panel (0-indexed)
+  const track = document.getElementById('bracket-track');
+  if (track) {
+    track.style.transform = `translateX(-${(round - 1) * 100}%)`;
+  }
+  // Scroll the selected pill into view
+  const pill = document.querySelector(`.round-pill[data-round="${round}"]`);
+  if (pill) pill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function renderBracket() {
+  const track = document.getElementById('bracket-track');
+  if (!track) return;
+
+  // Auto-init bracket data if not set up yet
+  if (!Object.keys(state.bracket).length) initBracket();
+
+  // Build all 6 round panels
+  track.innerHTML = '';
+  for (let round = 1; round <= 6; round++) {
+    const panel = document.createElement('div');
+    panel.className = 'bracket-round-panel';
+    panel.id = `round-panel-${round}`;
+    panel.innerHTML = buildRoundHTML(round);
+    track.appendChild(panel);
+  }
+
+  // Snap to current round without animation
+  track.style.transition = 'none';
+  track.style.transform  = `translateX(-${(_currentRound - 1) * 100}%)`;
+  requestAnimationFrame(() => {
+    track.style.transition = '';
+  });
+
+  // Init swipe gesture
+  initSwipe();
+}
+
+function buildRoundHTML(round) {
+  const isFinal4 = round === 5;
+  const isChamp  = round === 6;
+
+  if (isChamp) return buildChampHTML();
+  if (isFinal4) return buildFinal4HTML();
+
+  // Rounds 1-4: show all 4 regions
+  return REGIONS.map(region => {
+    const matchups = state.bracket[region]?.[round] || [];
+    const color    = REGION_COLORS[region];
+
+    const matchupCards = matchups.length
+      ? matchups.map((m, idx) => buildMatchupCard(m, region, round, idx)).join('')
+      : `<div class="tbd-card">No matchups yet — advance previous round first.</div>`;
+
+    return `
+      <div class="region-section">
+        <div class="region-header-row">
+          <div class="region-dot" style="background:${color}"></div>
+          <span class="region-title" style="color:${color}">${region.toUpperCase()}</span>
+        </div>
+        ${matchupCards}
+      </div>`;
+  }).join('');
+}
+
+function buildMatchupCard(m, region, round, idx) {
+  // If game has been played, show who owned the team going into that game
+  // If game hasn't been played yet, show current owner
+  const owner1 = m.result ? (m.owner1 || '—') : (state.ownership[region]?.[m.team1] || '—');
+  const owner2 = m.result ? (m.owner2 || '—') : (state.ownership[region]?.[m.team2] || '—');
+  const isTBD1 = !m.team1 || m.team1 === 'TBD';
+  const isTBD2 = !m.team2 || m.team2 === 'TBD';
+
+  if (isTBD1 && isTBD2) return `<div class="tbd-card">TBD</div>`;
+
+  const getFFLabel = (teamSlot) => {
+    const ff = FIRST_FOUR.find(f => f.bracketSlot === teamSlot);
+    if (!ff) return teamSlot;
+    return ff.team1.replace(/^\d+\s+/,'') + '/' + ff.team2.replace(/^\d+\s+/,'');
+  };
+
+  const display1 = isTBD1 ? 'TBD' : getFFLabel(m.team1);
+  const display2 = isTBD2 ? 'TBD' : getFFLabel(m.team2);
+
+  // For single TBD slot, show the First Four matchup label
+  if (isTBD1) {
+    const ff = FIRST_FOUR.find(f => f.region === region && DEFAULT_TEAMS[region].findIndex(t => t === m.team2) === f.seed - 1);
+    if (ff) m = { ...m, team1: ff.team1 + '/' + ff.team2.replace(/^\d+\s+/,'') };
+  }
+  if (isTBD2) {
+    const ff = FIRST_FOUR.find(f => f.region === region);
+    if (ff) m = { ...m, team2: ff.team1 + '/' + ff.team2.replace(/^\d+\s+/,'') };
+  }
+
+  // Determine won/lost states
+  const state1 = m.result
+    ? (m.result.spreadWinner === m.team1 ? 'won' : 'lost') : (m.liveScore ? 'live-row' : '');
+  const state2 = m.result
+    ? (m.result.spreadWinner === m.team2 ? 'won' : 'lost') : (m.liveScore ? 'live-row' : '');
+
+  // Spread: show on top team only
+  const spreadTxt = m.spread !== null && m.spread !== undefined
+    ? (m.spread > 0 ? `+${m.spread}` : `${m.spread}`) : '';
+
+  // Live/final score
+  let score1Txt = '', score2Txt = '', scoreCls = '';
+  if (m.result) {
+    score1Txt = m.result.score1; score2Txt = m.result.score2; scoreCls = 'final';
+  } else if (m.liveScore) {
+    score1Txt = m.liveScore.score1; score2Txt = m.liveScore.score2; scoreCls = 'live';
+  }
+
+  // Parse seed + name
+  const [seed1, name1] = parseSeedName(display1);
+  const [seed2, name2] = parseSeedName(display2);
+
+  // Footer status
+  let footerLeft = '';
+  if (m.result) {
+    footerLeft = `<span class="badge badge-alive">Final</span>`;
+  } else if (m.liveScore && !m.liveScore.completed) {
+    footerLeft = `<span class="badge badge-live">Live</span>`;
+  } else if (m.spread !== null) {
+    footerLeft = `<span style="color:var(--muted)">Spread set</span>`;
+  }
+
+  // Safe JSON for onclick
+  const safeM = JSON.stringify(m).replace(/\'/g, '&#39;').replace(/"/g, '&quot;');
+
+  return `
+    <div class="matchup-card" onclick="openModalById('${region}', ${round}, ${idx})">
+      <div class="team-row ${state1}">
+        <div class="seed-badge">${seed1}</div>
+        <div class="team-info">
+          <div class="team-name-txt">${name1 || 'TBD'}</div>
+          <div class="team-owner-txt">${owner1}</div>
+        </div>
+        <div class="team-right">
+          ${spreadTxt ? `<span class="spread-chip">${spreadTxt}</span>` : ''}
+          ${score1Txt !== '' ? `<span class="score-chip ${scoreCls}">${score1Txt}</span>` : ''}
+        </div>
+      </div>
+      <div class="team-row ${state2}">
+        <div class="seed-badge">${seed2}</div>
+        <div class="team-info">
+          <div class="team-name-txt">${name2 || 'TBD'}</div>
+          <div class="team-owner-txt">${owner2}</div>
+        </div>
+        <div class="team-right">
+          ${score2Txt !== '' ? `<span class="score-chip ${scoreCls}">${score2Txt}</span>` : ''}
+        </div>
+      </div>
+      <div class="matchup-footer">
+        ${footerLeft}
+        <span style="color:var(--muted);font-size:11px">Tap to enter result</span>
+      </div>
+    </div>`;
+}
+
+function buildFinal4HTML() {
+  const f4Matchups = [
+    { label: 'East vs South', matchup: state.bracket['East']?.[5]?.[0] },
+    { label: 'West vs Midwest', matchup: state.bracket['West']?.[5]?.[0] },
+  ];
+
+  return f4Matchups.map(({ label, matchup }) => {
+    if (!matchup || (matchup.team1 === 'TBD' && matchup.team2 === 'TBD')) {
+      return `<div class="tbd-card">${label} — TBD</div>`;
+    }
+    return `
+      <div class="region-section">
+        <div class="region-header-row">
+          <div class="region-dot" style="background:var(--accent)"></div>
+          <span class="region-title" style="color:var(--accent)">${label.toUpperCase()}</span>
+        </div>
+        ${buildMatchupCard(matchup, 'East', 5, 0)}
+      </div>`;
+  }).join('');
+}
+
+function buildChampHTML() {
+  const champMatchup = state.bracket['East']?.[6]?.[0]
+    || { team1: 'TBD', team2: 'TBD', spread: null, result: null };
+  return `
+    <div class="region-section">
+      <div class="region-header-row">
+        <div class="region-dot" style="background:var(--accent)"></div>
+        <span class="region-title" style="color:var(--accent)">NATIONAL CHAMPIONSHIP</span>
+      </div>
+      ${buildMatchupCard(champMatchup, 'East', 6, 0)}
+    </div>`;
+}
+
+// Parse "1 Duke" → ["1", "Duke"], "TBD" → ["", "TBD"]
+function parseSeedName(teamStr) {
+  if (!teamStr || teamStr === 'TBD') return ['', 'TBD'];
+  const parts = teamStr.split(' ');
+  if (parts.length > 1 && !isNaN(parts[0])) return [parts[0], parts.slice(1).join(' ')];
+  return ['', teamStr];
+}
+
+/* ==============================================================
+   SWIPE TO CHANGE ROUNDS
+   Touch: swipe left → next round, swipe right → previous round
+   Also works with mouse drag on desktop
+   ============================================================== */
+function initSwipe() {
+  const outer = document.getElementById('bracket-outer');
+  if (!outer || outer._swipeInit) return;
+  outer._swipeInit = true;
+
+  let startX = 0, startY = 0, isDragging = false, isHorizontal = null;
+
+  outer.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isHorizontal = null;
+    isDragging = true;
+  }, { passive: true });
+
+  outer.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Determine scroll axis on first significant move
+    if (isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      isHorizontal = Math.abs(dx) > Math.abs(dy);
+    }
+    // Only prevent default for horizontal swipes (let vertical scroll work)
+    if (isHorizontal) e.preventDefault();
+  }, { passive: false });
+
+  outer.addEventListener('touchend', e => {
+    if (!isDragging) return;
+    isDragging = false;
+    if (!isHorizontal) return; // was vertical scroll, ignore
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0 && _currentRound < 6) selectRound(_currentRound + 1);
+      if (dx > 0 && _currentRound > 1) selectRound(_currentRound - 1);
+    }
+  }, { passive: true });
+}
+
+
+
+/* ==============================================================
+   4. SETUP PAGE — PLAYER INPUTS & DRAFT TABLE
+   ============================================================== */
+
+// Build the 16 player name input fields (2-column grid)
+function buildPlayerInputs() {
+  const cont = document.getElementById('player-inputs');
+  cont.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const div = document.createElement('div');
+    div.className = 'player-row-inner';
+    div.innerHTML = `
+      <span class="player-num">${i + 1}</span>
+      <input type="text"
+             id="p${i}"
+             placeholder="Player ${i + 1}"
+             value="${state.players[i]?.name || ''}">
+    `;
+    cont.appendChild(div);
+  }
+}
+
+function clearPlayers() {
+  for (let i = 0; i < 16; i++) {
+    const el = document.getElementById('p' + i);
+    if (el) el.value = '';
+  }
+}
+
+// Build the draft table: one row per player, one dropdown per region
+function buildDraftTable() {
+  const tbody = document.getElementById('draft-tbody');
+  tbody.innerHTML = '';
+
+  // Use saved player names or fall back to placeholders
+  const names = state.players.length
+    ? state.players.map(p => p.name)
+    : Array.from({length: 16}, (_, i) => `Player ${i + 1}`);
+
+  names.forEach(name => {
+    const tr = document.createElement('tr');
+
+    const regionCells = REGIONS.map(region => {
+      const currentPick = state.draft[name]?.[region] || '';
+      const options = DEFAULT_TEAMS[region]
+        .map(t => `<option value="${t}" ${t === currentPick ? 'selected' : ''}>${t}</option>`)
+        .join('');
+      return `<td>
+        <select style="width:150px" data-player="${name}" data-region="${region}">
+          <option value="">— Pick —</option>
+          ${options}
+        </select>
+      </td>`;
+    }).join('');
+
+    tr.innerHTML = `<td><strong>${name}</strong></td>${regionCells}`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Initialize the setup page: build inputs, load existing state into fields
+function initSetup() {
+  buildPlayerInputs();
+  buildDraftTable();
+  // Pre-fill API key if saved
+  const keyInput = document.getElementById('api-key-input');
+  if (keyInput && state.apiKey) keyInput.value = state.apiKey;
+  updateApiDot(false);
+}
+
+
+/* ==============================================================
+   5. DRAFT SAVE & BRACKET INIT
+   ============================================================== */
+
+function saveDraft() {
+  // Read player names from inputs
+  const names = Array.from({length:16}, (_, i) => {
+    const el = document.getElementById('p' + i);
+    return el ? el.value.trim() : '';
+  }).filter(Boolean);
+
+  if (names.length < 2) {
+    showMsg('save-msg', 'Enter at least 2 player names.', 'danger');
+    return;
+  }
+
+  // Build state.players
+  state.players = names.map(n => ({name: n}));
+
+  // Reset per-player tracking objects
+  state.draft      = {};
+  state.ownership  = {};
+  state.eliminated = {};
+  state.roundsWon  = {};
+
+  names.forEach(n => {
+    state.draft[n]    = {};
+    state.roundsWon[n] = 0;
+  });
+  REGIONS.forEach(r => { state.eliminated[r] = new Set(); });
+
+  // Read all draft dropdowns
+  document.querySelectorAll('#draft-tbody select').forEach(sel => {
+    const player = sel.dataset.player;
+    const region = sel.dataset.region;
+    if (sel.value && names.includes(player)) {
+      state.draft[player][region] = sel.value;
+    }
+  });
+
+  // Build initial ownership map from draft picks
+  REGIONS.forEach(region => {
+    state.ownership[region] = {};
+    names.forEach(name => {
+      const pick = state.draft[name]?.[region];
+      if (pick) state.ownership[region][pick] = name;
+    });
+  });
+
+  // Only init the bracket if it's fresh (don't wipe progress on re-save)
+  if (!Object.keys(state.bracket).length) {
+    initBracket();
+  }
+
+  saveState();
+  showMsg('save-msg', '✓ Draft saved! Head to the Bracket tab.', 'success');
+}
+
+// Set up the bracket data structure with Round 1 matchups.
+// Rounds 2-6 start empty and get populated as winners advance.
+function initBracket() {
+  state.bracket = {};
+  REGIONS.forEach(region => {
+    state.bracket[region] = {};
+    const teams = DEFAULT_TEAMS[region];
+
+    // Round 1: pair teams using R1_PAIRS
+    state.bracket[region][1] = R1_PAIRS.map(([a, b], idx) => ({
+      team1:  teams[a],
+      team2:  teams[b],
+      spread: null,       // filled in by API or manually
+      result: null,       // {score1, score2, winner} set when game ends
+      gameId: null,       // API game ID for live score matching
+    }));
+
+    // Empty placeholders for future rounds
+    for (let round = 2; round <= 6; round++) {
+      state.bracket[region][round] = [];
+    }
+  });
+}
+
+
+/* ==============================================================
+   6. THE ODDS API — FETCHING SCORES & SPREADS
+   ==============================================================
+   The Odds API has two relevant endpoints:
+     /v4/sports/basketball_ncaab/odds   → spreads (pre-game)
+     /v4/sports/basketball_ncaab/scores → live + final scores
+
+   We call both, then:
+     1. Match games to bracket matchups by team name fuzzy matching
+     2. Update spreads on unplayed matchups
+     3. Auto-process completed games (calculate coverage, advance winner)
+   ============================================================== */
+
+/*
+  WHY WE USE A CORS PROXY:
+  The Odds API blocks direct browser fetch() calls due to CORS (a browser
+  security rule that prevents pages from calling external APIs directly).
+  The API is designed to be called from a server, not a webpage.
+
+  We route through allorigins.win — a free public CORS proxy.
+  It wraps the response: { contents: "<json string>", status: { http_code: 200 } }
+
+  If the proxy is down, syncing will silently fail but the bracket still
+  works fine — you can always enter results manually by tapping a matchup.
+*/
+// CORS proxy list — tries each one in order until one works
+const CORS_PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${url}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+];
+
+async function corsUrl(url) {
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const res = await fetch(proxy(url), { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) continue;
+      const text = await res.text();
+      // corsproxy.io returns raw JSON, others may wrap it
+      try {
+        const parsed = JSON.parse(text);
+        // allorigins-style wrapper: { contents: "..." }
+        if (parsed.contents) return JSON.parse(parsed.contents);
+        // codetabs returns parsed JSON directly
+        return parsed;
+      } catch {
+        continue;
+      }
+    } catch {
+      continue; // try next proxy
+    }
+  }
+  throw new Error('All proxies failed — check connection');
+}
+
+async function fetchAndSync() {
+  if (!state.apiKey) return; // silently skip if no key
+
+  // Update sync button state
+  const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
+  btns.forEach(b => { b.textContent = '⟳ Syncing...'; b.disabled = true; });
+
+  const oddsUrl = `https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/?apiKey=${state.apiKey}&regions=us&markets=spreads&oddsFormat=american&bookmakers=draftkings`;
+  const scoresUrl = `https://api.the-odds-api.com/v4/sports/basketball_ncaab/scores/?apiKey=${state.apiKey}&daysFrom=3`;
+
+  try {
+    // Fetch spreads through proxy
+    const oddsData = await corsUrl(oddsUrl);
+    if (!Array.isArray(oddsData)) throw new Error(oddsData.message || 'Bad odds response');
+
+    const scoresData = await corsUrl(scoresUrl);
+    if (!Array.isArray(scoresData)) throw new Error(scoresData.message || 'Bad scores response');
+
+    state.scoresCache = scoresData;
+    state.lastFetch   = new Date().toISOString();
+
+    matchSpreadsTobracket(oddsData);
+    matchScoresToBracket(scoresData);
+
+    saveState();
+    updateApiDot(true);
+    renderBracket();
+    renderScoresPage();
+    renderLeaderboard();
+    updateLiveBadge();
+
+    // Show brief success state on button
+    btns.forEach(b => { b.textContent = '✓ Synced'; });
+    setTimeout(() => btns.forEach(b => { b.textContent = '⟳ Sync'; b.disabled = false; }), 2000);
+
+  } catch (err) {
+    // Log to console only — no popup alerts
+    console.warn('Sync failed (enter results manually):', err.message);
+    btns.forEach(b => { b.textContent = '⟳ Sync'; b.disabled = false; });
+    // Show quiet error in scores page without disrupting bracket
+    const grid = document.getElementById('scores-grid');
+    if (grid && !state.scoresCache?.length) grid.innerHTML = `
+      <div class="no-data">
+        Scores not yet available — tap Sync to retry.
+      </div>`;
+  }
+}
+
+
+/* ==============================================================
+   TEAM NAME MATCHING
+   ==============================================================
+   The API uses full team names like "Duke Blue Devils".
+   Our bracket uses "1 Duke" (seed + abbreviated name).
+   This function does a fuzzy match:
+     1. Strip the seed number from our name → "Duke"
+     2. Check if the API name contains our word (or vice versa)
+   ============================================================== */
+function teamsMatch(apiName, bracketName) {
+  if (!apiName || !bracketName) return false;
+
+  const bracket = bracketName.replace(/^\d+\s+/, '').trim();
+  const api     = apiName.trim();
+
+  if (bracket === api) return true;
+
+  const MAP = {
+    'Duke':'Duke Blue Devils','UConn':'UConn Huskies','Michigan St':'Michigan St Spartans',
+    'Kansas':'Kansas Jayhawks','St Johns':"St. John's Red Storm",'Louisville':'Louisville Cardinals',
+    'UCLA':'UCLA Bruins','Ohio St':'Ohio State Buckeyes','TCU':'TCU Horned Frogs',
+    'UCF':'UCF Knights','South Florida':'South Florida Bulls','Northern Iowa':'Northern Iowa Panthers',
+    'Cal Baptist':'Cal Baptist Lancers','North Dakota St':'North Dakota St Bison',
+    'Furman':'Furman Paladins','Siena':'Siena Saints','Arizona':'Arizona Wildcats',
+    'Purdue':'Purdue Boilermakers','Gonzaga':'Gonzaga Bulldogs','Arkansas':'Arkansas Razorbacks',
+    'Wisconsin':'Wisconsin Badgers','BYU':'BYU Cougars','Miami FL':'Miami Hurricanes',
+    'Villanova':'Villanova Wildcats','Utah St':'Utah State Aggies','Missouri':'Missouri Tigers',
+    'NC State':'NC State Wolfpack','High Point':'High Point Panthers',
+    'Hawaii':"Hawai'i Rainbow Warriors",'Kennesaw St':'Kennesaw St Owls',
+    'Queens':'Queens University Royals','LIU':'LIU Sharks','Florida':'Florida Gators',
+    'Houston':'Houston Cougars','Illinois':'Illinois Fighting Illini',
+    'Nebraska':'Nebraska Cornhuskers','Vanderbilt':'Vanderbilt Commodores',
+    'North Carolina':'North Carolina Tar Heels','Saint Marys':"Saint Mary's Gaels",
+    'Clemson':'Clemson Tigers','Iowa':'Iowa Hawkeyes','VCU':'VCU Rams',
+    'McNeese':'McNeese Cowboys','Troy':'Troy Trojans','Penn':'Pennsylvania Quakers',
+    'Idaho':'Idaho Vandals','Lehigh':'Lehigh Mountain Hawks','Michigan':'Michigan Wolverines',
+    'Iowa St':'Iowa State Cyclones','Virginia':'Virginia Cavaliers','Alabama':'Alabama Crimson Tide',
+    'Texas Tech':'Texas Tech Red Raiders','Tennessee St':'Tennessee St Tigers',
+    'Hofstra':'Hofstra Pride','Georgia':'Georgia Bulldogs','Saint Louis':'Saint Louis Billikens',
+    'Kentucky':'Kentucky Wildcats','Santa Clara':'Santa Clara Broncos','Akron':'Akron Zips',
+    'Wright St':'Wright St Raiders','SMU':'SMU Mustangs','Howard':'Howard Bison',
+    'UMBC':'UMBC Retrievers','Texas':'Texas Longhorns','Georgia Tech':'Georgia Tech Yellow Jackets',
+    'Texas A&M':'Texas A&M Aggies','Prairie View':'Prairie View Panthers',
+    'Kent State':'Kent State Golden Flashes','Illinois St':'Illinois St Redbirds',
+    'Miami OH':'Miami (OH) RedHawks',
+  };
+
+  if (MAP[bracket] === api) return true;
+  if (MAP[api] === bracket) return true;
+
+  return false;
+}
+
+
+// Match spread data from the odds endpoint to bracket matchups
+function matchSpreadsTobracket(games) {
+  games.forEach(game => {
+    const home = game.home_team;
+    const away = game.away_team;
+
+    const bk  = game.bookmakers?.[0];
+    const mkt = bk?.markets?.find(m => m.key === 'spreads');
+    if (!mkt) return;
+
+    const homeOutcome = mkt.outcomes?.find(o => o.name === home);
+    const awayOutcome = mkt.outcomes?.find(o => o.name === away);
+    const homeSpread  = homeOutcome?.point ?? null;
+    if (homeSpread === null) return;
+
+    REGIONS.forEach(region => {
+      [1,2,3,4,5,6].forEach(round => {
+        (state.bracket[region]?.[round] || []).forEach(matchup => {
+          if (matchup.result) return;
+
+          const t1isHome = teamsMatch(home, matchup.team1);
+          const t1isAway = teamsMatch(away, matchup.team1);
+          const t2isHome = teamsMatch(home, matchup.team2);
+          const t2isAway = teamsMatch(away, matchup.team2);
+
+          // Need one team on each side to confirm it's the right game
+          if (!((t1isHome && t2isAway) || (t1isAway && t2isHome))) return;
+
+          // Set spread from team1's perspective
+          if (t1isHome) {
+            matchup.spread = homeSpread;
+          } else {
+            matchup.spread = -homeSpread;
+          }
+
+          // Always store gameId so scores can find this matchup later
+          matchup.gameId = game.id;
+        });
+      });
+    });
+  });
+  // Match spreads for First Four games and store on the FIRST_FOUR objects
+  games.forEach(game => {
+    const ff = FIRST_FOUR.find(f =>
+      (teamsMatch(game.home_team, f.team1) || teamsMatch(game.home_team, f.team2)) &&
+      (teamsMatch(game.away_team, f.team1) || teamsMatch(game.away_team, f.team2))
+    );
+    if (!ff) return;
+
+    const bk  = game.bookmakers?.[0];
+    const mkt = bk?.markets?.find(m => m.key === 'spreads');
+    if (!mkt) return;
+
+    const t1Outcome = mkt.outcomes?.find(o => teamsMatch(o.name, ff.team1));
+    if (t1Outcome) {
+      ff.spread     = t1Outcome.point;
+      ff.gameId     = game.id;
+    }
+  });
+}
+
+
+// Match live/final scores to bracket matchups and auto-advance completed games
+function matchScoresToBracket(games) {
+  const TOURNEY_START = new Date('2026-03-17T00:00:00Z');
+  const tourneyGames = games.filter(game => {
+    const gameDate = new Date(game.commence_time);
+    if (gameDate < TOURNEY_START) return false;
+    return REGIONS.some(r => DEFAULT_TEAMS[r].some(t => teamsMatch(game.home_team, t))) &&
+           REGIONS.some(r => DEFAULT_TEAMS[r].some(t => teamsMatch(game.away_team, t)));
+  });
+  tourneyGames.forEach(game => {
+    const home = game.home_team;
+    const away = game.away_team;
+
+    // The scores array: [{name: "Team", score: "72"}, {name: "Team2", score: "68"}]
+    const scores = game.scores;
+    if (!scores || scores.length < 2) return;
+
+    const homeScore = parseFloat(scores.find(s => s.name === home)?.score);
+    const awayScore = parseFloat(scores.find(s => s.name === away)?.score);
+
+    REGIONS.forEach(region => {
+      [1,2,3,4,5,6].forEach(round => {
+        (state.bracket[region]?.[round] || []).forEach((matchup, idx) => {
+          // Try to match by stored gameId first (most reliable),
+          // then fall back to name matching
+          const idMatch   = matchup.gameId && matchup.gameId === game.id;
+          const nameMatch = teamsMatch(home, matchup.team1) && teamsMatch(away, matchup.team2)
+                         || teamsMatch(away, matchup.team1) && teamsMatch(home, matchup.team2);
+
+          if (!idMatch && !nameMatch) return;
+
+          // Store the gameId now that we've confirmed the match
+          matchup.gameId = game.id;
+
+          // Determine which API team maps to team1 / team2
+          let score1, score2;
+          if (teamsMatch(home, matchup.team1)) {
+            score1 = homeScore; score2 = awayScore;
+          } else {
+            score1 = awayScore; score2 = homeScore;
+          }
+
+          if (isNaN(score1) || isNaN(score2)) return;
+
+          // Tag the matchup with live score for display even before completion
+          matchup.liveScore = { score1, score2, completed: game.completed };
+
+          // Auto-process ONLY when the game is marked completed
+          // (don't advance based on halftime scores!)
+          if (game.completed && !matchup.result) {
+            processResult(region, round, idx, score1, score2);
+          }
+        });
+      });
+    });
+  });
+  // Auto-fill First Four winners into bracket TBD slots
+  // Auto-fill First Four winners into bracket TBD slots
+  FIRST_FOUR.forEach(ff => {
+    const game = games.find(g =>
+      (teamsMatch(g.home_team, ff.team1) || teamsMatch(g.home_team, ff.team2)) &&
+      (teamsMatch(g.away_team, ff.team1) || teamsMatch(g.away_team, ff.team2))
+    );
+    if (!game || !game.completed) return;
+
+    const scores    = game.scores || [];
+    const homeScore = parseFloat(scores.find(s => s.name === game.home_team)?.score);
+    const awayScore = parseFloat(scores.find(s => s.name === game.away_team)?.score);
+    if (isNaN(homeScore) || isNaN(awayScore)) return;
+
+    const winnerApi  = homeScore > awayScore ? game.home_team : game.away_team;
+    const winnerName = teamsMatch(winnerApi, ff.team1) ? ff.team1 : ff.team2;
+
+    // Fill the specific bracketSlot with the winner
+    (state.bracket[ff.region]?.[1] || []).forEach(matchup => {
+      if (matchup.team1 === ff.bracketSlot) {
+        matchup.team1 = winnerName;
+        if (ff.owner) state.ownership[ff.region][winnerName] = ff.owner;
+      }
+      if (matchup.team2 === ff.bracketSlot) {
+        matchup.team2 = winnerName;
+        if (ff.owner) state.ownership[ff.region][winnerName] = ff.owner;
+      }
+    });
+  });
+}
+
+
+/* ==============================================================
+   7. SPREAD LOGIC
+   ==============================================================
+   didCoverSpread(score1, score2, spread):
+     Returns true if team1 covered the spread.
+
+     The spread is from team1's perspective:
+       spread = -5.5 means team1 is favored by 5.5
+       team1 covers if: score1 + spread > score2
+       e.g. team1=75, team2=70, spread=-5.5 → 75 - 5.5 = 69.5 < 70 → did NOT cover
+
+     spread = +3.5 means team1 is the underdog (gets 3.5 points)
+       team1 covers if: score1 + 3.5 > score2
+       e.g. team1=67, team2=70, spread=+3.5 → 67 + 3.5 = 70.5 > 70 → covered!
+   ============================================================== */
+function didCoverSpread(score1, score2, spread) {
+  if (spread === null || spread === undefined) {
+    // No spread set — use outright winner
+    return score1 > score2;
+  }
+  return (score1 + spread) > score2;
+}
+
+
+// Process a completed game: determine winner, update ownership, eliminate loser's owner, advance
+function processResult(region, round, idx, score1, score2) {
+  const matchup = state.bracket[region][round][idx];
+  const spread  = matchup.spread;
+
+  const team1Covered = didCoverSpread(score1, score2, spread);
+
+  // The team that covered the spread is the "winner" for our purposes
+  const spreadWinner = team1Covered ? matchup.team1 : matchup.team2;
+  const spreadLoser  = team1Covered ? matchup.team2 : matchup.team1;
+
+  // The team that actually won the game advances in the bracket
+  // (higher score wins regardless of spread)
+  const gameWinner = score1 > score2 ? matchup.team1 : matchup.team2;
+
+  // Save the result — game winner advances, spread winner gets credit
+  matchup.result = { score1, score2, winner: gameWinner, spreadWinner };
+  // Snapshot who owned each team going INTO this game
+  matchup.owner1 = state.ownership[region]?.[matchup.team1] || '—';
+  matchup.owner2 = state.ownership[region]?.[matchup.team2] || '—';
+
+  const spreadWinnerOwner = state.ownership[region]?.[spreadWinner];
+  const spreadLoserOwner  = state.ownership[region]?.[spreadLoser];
+
+  // Spread loser's owner is eliminated from this region
+  if (spreadLoserOwner) {
+    state.eliminated[region].add(spreadLoserOwner);
+  }
+
+  // Steal rule: if spread winner != game winner,
+  // the spread winner's owner takes ownership of the game winner (advancing team)
+  if (spreadWinner !== gameWinner) {
+    // Transfer ownership of the advancing team to the spread winner's owner
+    if (spreadWinnerOwner) {
+      state.ownership[region][gameWinner] = spreadWinnerOwner;
+    }
+  }
+
+  // Award a round win to the spread winner's owner
+  if (spreadWinnerOwner) {
+    state.roundsWon[spreadWinnerOwner] = (state.roundsWon[spreadWinnerOwner] || 0) + 1;
+  }
+
+  // Advance the actual game winner into the next round
+  advanceWinner(region, round, idx, gameWinner);
+}
+
+
+// Put the winner into the correct slot of the next round
+function advanceWinner(region, round, idx, winner) {
+  const nextRound = round + 1;
+  if (nextRound > 6) return;
+
+  // Rounds 1-4: winners stay within their region
+  if (round < 4) {
+    if (!state.bracket[region][nextRound]) state.bracket[region][nextRound] = [];
+    const slot     = Math.floor(idx / 2);
+    const position = idx % 2;
+    if (!state.bracket[region][nextRound][slot]) {
+      state.bracket[region][nextRound][slot] = {
+        team1: 'TBD', team2: 'TBD', spread: null, result: null, gameId: null
+      };
+    }
+    if (position === 0) state.bracket[region][nextRound][slot].team1 = winner;
+    else                state.bracket[region][nextRound][slot].team2 = winner;
+    return;
+  }
+
+  // Round 4 (Elite 8) winners go to Final Four (Round 5)
+  // East winner vs South winner — stored in East bracket slot
+  // West winner vs Midwest winner — stored in West bracket slot
+  if (round === 4) {
+    const F4_MATCHUPS = {
+      'East':    { storeIn: 'East',  position: 0 }, // team1
+      'South':   { storeIn: 'East',  position: 1 }, // team2
+      'West':    { storeIn: 'West',  position: 0 }, // team1
+      'Midwest': { storeIn: 'West',  position: 1 }, // team2
+    };
+    const f4 = F4_MATCHUPS[region];
+    if (!state.bracket[f4.storeIn][5]) state.bracket[f4.storeIn][5] = [];
+    if (!state.bracket[f4.storeIn][5][0]) {
+      state.bracket[f4.storeIn][5][0] = {
+        team1: 'TBD', team2: 'TBD', spread: null, result: null, gameId: null
+      };
+    }
+    if (f4.position === 0) state.bracket[f4.storeIn][5][0].team1 = winner;
+    else                   state.bracket[f4.storeIn][5][0].team2 = winner;
+    // Copy ownership into the Final Four region slot
+    const owner = state.ownership[region]?.[winner];
+    if (owner) state.ownership[f4.storeIn][winner] = owner;
+    return;
+  }
+
+  // Round 5 (Final Four) winners go to Championship (Round 6)
+  // Stored in East bracket slot 0
+  if (round === 5) {
+    if (!state.bracket['East'][6]) state.bracket['East'][6] = [];
+    if (!state.bracket['East'][6][0]) {
+      state.bracket['East'][6][0] = {
+        team1: 'TBD', team2: 'TBD', spread: null, result: null, gameId: null
+      };
+    }
+    // East/South winner = team1, West/Midwest winner = team2
+    if (region === 'East') state.bracket['East'][6][0].team1 = winner;
+    else                   state.bracket['East'][6][0].team2 = winner;
+    // Copy ownership into Championship slot
+    const champOwner = state.ownership[region]?.[winner];
+    if (champOwner) state.ownership['East'][winner] = champOwner;                   state.bracket['East'][6][0].team2 = winner;
+  }
+}
+
+
+
+
+/* ==============================================================
+   9. RESULT MODAL
+   ============================================================== */
+let _modal = null; // stores the current modal context
+function openModalById(region, round, idx) {
+  const matchup = state.bracket[region]?.[round]?.[idx];
+  if (!matchup) return;
+  openResultModal(matchup, region, round, idx);
+}
+function openResultModal(matchup, region, round, idx) {
+  _modal = { matchup, region, round, idx };
+
+  // For completed games show the original owner (who had the team going into that game)
+  // For upcoming games show the current owner
+  const owner1 = m.result
+    ? (state.draft[Object.keys(state.draft).find(p => state.draft[p][region] === m.team1)]
+       || state.ownership[region]?.[m.team1] || '—')
+    : (state.ownership[region]?.[m.team1] || '—');
+  const owner2 = m.result
+    ? (state.draft[Object.keys(state.draft).find(p => state.draft[p][region] === m.team2)]
+       || state.ownership[region]?.[m.team2] || '—')
+    : (state.ownership[region]?.[m.team2] || '—');
+  const spread = matchup.spread;
+
+  document.getElementById('modal-title').textContent =
+    `${region} — ${ROUND_NAMES[round]}`;
+
+  document.getElementById('modal-info').innerHTML = `
+    <strong>${matchup.team1}</strong> (${owner1})
+    vs
+    <strong>${matchup.team2}</strong> (${owner2})<br>
+    <span class="text-accent">Spread: ${spread !== null ? spread : 'Not set — enter manually'}</span>
+  `;
+
+  document.getElementById('label-score1').textContent = matchup.team1 + ' Score';
+  document.getElementById('label-score2').textContent = matchup.team2 + ' Score';
+
+  // Pre-fill existing result if editing
+  const res = matchup.liveScore || matchup.result;
+  document.getElementById('score1').value = res?.score1 ?? '';
+  document.getElementById('score2').value = res?.score2 ?? '';
+
+  document.getElementById('modal-preview').style.display = 'none';
+  document.getElementById('result-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('result-modal').classList.remove('open');
+  _modal = null;
+}
+
+// Called on every keystroke in the score inputs — shows live preview
+function previewResult() {
+  if (!_modal) return;
+  const { matchup, region } = _modal;
+  const s1 = parseFloat(document.getElementById('score1').value);
+  const s2 = parseFloat(document.getElementById('score2').value);
+
+  const prev = document.getElementById('modal-preview');
+  if (isNaN(s1) || isNaN(s2)) { prev.style.display = 'none'; return; }
+
+  const covered = didCoverSpread(s1, s2, matchup.spread);
+  const winner  = covered ? matchup.team1 : matchup.team2;
+  const loser   = covered ? matchup.team2 : matchup.team1;
+  const wo = state.ownership[region]?.[winner] || '—';
+  const lo = state.ownership[region]?.[loser]  || '—';
+
+  prev.style.display = 'block';
+  prev.innerHTML = `
+    <span class="text-success">✓ ${winner}</span> covered the spread.<br>
+    <strong>${wo}</strong> advances in the ${region} region.<br>
+    <span class="text-danger">${lo} is eliminated from ${region}.</span>
+  `;
+}
+
+function confirmResult() {
+  if (!_modal) return;
+  const { region, round, idx } = _modal;
+  const s1 = parseFloat(document.getElementById('score1').value);
+  const s2 = parseFloat(document.getElementById('score2').value);
+
+  if (isNaN(s1) || isNaN(s2)) { alert('Enter both scores first.'); return; }
+
+  processResult(region, round, idx, s1, s2);
+  saveState();
+  closeModal();
+  renderBracket();
+  renderLeaderboard();
+}
+
+
+/* ==============================================================
+   10. LEADERBOARD
+   ============================================================== */
+function renderLeaderboard() {
+  const tbody = document.getElementById('lb-tbody');
+  if (!tbody) return;
+
+  if (!state.players.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No players yet — go to Setup.</td></tr>';
+    return;
+  }
+
+  // Build and sort player rows
+  const rows = state.players.map(p => {
+    const name = p.name;
+    const regionStatuses = REGIONS.map(r => {
+      if (!state.draft[name]?.[r])    return 'pending';
+      if ((state.eliminated[r] || new Set()).has(name)) return 'out';
+      return 'alive';
+    });
+    const aliveCount = regionStatuses.filter(s => s === 'alive').length;
+    return { name, regionStatuses, aliveCount, rounds: state.roundsWon[name] || 0 };
+  }).sort((a, b) => b.aliveCount - a.aliveCount || b.rounds - a.rounds);
+
+  tbody.innerHTML = rows.map((row, i) => `
+    <tr>
+      <td><span class="lb-rank ${i < 3 ? 'top3' : ''}">${i + 1}</span></td>
+      <td><strong>${row.name}</strong></td>
+      <td>
+        <span class="lb-score text-accent">${row.aliveCount}</span>
+        <span class="text-muted text-sm"> / 4</span>
+      </td>
+      ${row.regionStatuses.map(s => `
+        <td>
+          <span class="badge badge-${s === 'alive' ? 'alive' : s === 'out' ? 'out' : 'tbd'}">
+            ${s}
+          </span>
+        </td>
+      `).join('')}
+      <td><span class="lb-score">${row.rounds}</span></td>
+      <td>
+        <span class="badge ${row.aliveCount > 0 ? 'badge-alive' : 'badge-out'}">
+          ${row.aliveCount > 0 ? 'Active' : 'Eliminated'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+// Finds which player currently owns a team by fuzzy name matching
+function findOwner(apiTeamName) {
+  for (const region of REGIONS) {
+    const ownerMap = state.ownership[region] || {};
+    for (const [bracketName, owner] of Object.entries(ownerMap)) {
+      if (teamsMatch(apiTeamName, bracketName)) return owner;
+    }
+  }
+  return null;
+}
+
+/* ==============================================================
+   11. SCORES PAGE
+   ============================================================== */
+
+function renderScoresPage() {
+  const grid = document.getElementById('scores-grid');
+  if (!grid) return;
+
+   if (!state.scoresCache?.length) {
+    grid.innerHTML = `<div class="no-data">Tap Sync to load scores.</div>`;
+    return;
+  }
+
+  
+  
+  // Only show games where both teams are in our bracket
+  // Tournament starts March 18 2026 — ignore any games before that
+  const TOURNEY_START = new Date('2026-03-17T00:00:00Z');
+
+  // All First Four team names so they pass the filter
+  const firstFourTeams = FIRST_FOUR.flatMap(f => [f.team1, f.team2]);
+
+  const bracketGames = state.scoresCache.filter(game => {
+    const gameDate = new Date(game.commence_time);
+    if (gameDate < TOURNEY_START) return false;
+
+    // Check First Four games first
+    const isFirstFour = firstFourTeams.some(t => teamsMatch(game.home_team, t)) &&
+                        firstFourTeams.some(t => teamsMatch(game.away_team, t));
+    if (isFirstFour) return true;
+
+    // Regular tournament games
+    const homeMatch = REGIONS.some(r =>
+      DEFAULT_TEAMS[r].some(t => teamsMatch(game.home_team, t))
+    );
+    const awayMatch = REGIONS.some(r =>
+      DEFAULT_TEAMS[r].some(t => teamsMatch(game.away_team, t))
+    );
+    return homeMatch && awayMatch;
+  });
+
+  const sorted = [...bracketGames].sort((a, b) => {
+    const aLive = !a.completed && a.scores?.length > 0;
+    const bLive = !b.completed && b.scores?.length > 0;
+    if (aLive !== bLive) return aLive ? -1 : 1;
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return new Date(a.commence_time) - new Date(b.commence_time);
+  });
+
+  grid.innerHTML = sorted.map(game => {
+    const scores   = game.scores || [];
+    const isLive   = !game.completed && scores.length > 0;
+    const isFinal  = game.completed;
+    const time     = new Date(game.commence_time).toLocaleString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    });
+
+    // Status badge
+    const statusBadge = isFinal
+      ? `<span class="badge badge-final">Final</span>`
+      : isLive
+        ? `<span class="badge badge-live">Live</span>`
+        : `<span style="color:var(--muted);font-size:11px">${time}</span>`;
+
+    // Check if this is a First Four game and find spread from bracket
+    const ffGame = FIRST_FOUR.find(f =>
+      (teamsMatch(game.home_team, f.team1) || teamsMatch(game.home_team, f.team2)) &&
+      (teamsMatch(game.away_team, f.team1) || teamsMatch(game.away_team, f.team2))
+    );
+
+    // Find spread by matching team names against bracket matchups
+    // Pull spread directly from bracket — already matched and stored
+    let spreadFav = '', spreadLine = '';
+    outer: for (const r of REGIONS) {
+      for (const round of [1,2,3,4,5,6]) {
+        for (const m of (state.bracket[r]?.[round] || [])) {
+          if (m.spread === null || m.spread === undefined) continue;
+          if (!m.team1 || !m.team2) continue;
+          const idMatch   = m.gameId && m.gameId === game.id;
+          const homeIsT1  = teamsMatch(game.home_team, m.team1);
+          const homeIsT2  = teamsMatch(game.home_team, m.team2);
+          const awayIsT1  = teamsMatch(game.away_team, m.team1);
+          const awayIsT2  = teamsMatch(game.away_team, m.team2);
+          const nameMatch = (homeIsT1 && awayIsT2) || (homeIsT2 && awayIsT1);
+          if (!idMatch && !nameMatch) continue;
+          const favTeam = m.spread < 0 ? m.team1 : m.team2;
+          const parts   = (favTeam || '').split(' ');
+          const name    = parts.length > 1 && !isNaN(parts[0])
+                        ? parts.slice(1).join(' ') : favTeam;
+          spreadFav  = name;
+          spreadLine = `-${Math.abs(m.spread)}`;
+          break outer;
+        }
+      }
+    }
+    // If no spread found and it's a First Four game, pull from the bracket slot it feeds into
+     if (!spreadFav && ffGame && ffGame.spread !== undefined && ffGame.spread !== null) {
+      const favTeam = ffGame.spread < 0 ? ffGame.team1 : ffGame.team2;
+      const parts   = (favTeam || '').split(' ');
+      const name    = parts.length > 1 && !isNaN(parts[0])
+                    ? parts.slice(1).join(' ') : favTeam;
+      spreadFav  = name;
+      spreadLine = `-${Math.abs(ffGame.spread)}`;
+    }
+
+    // Team rows
+    const buildRow = (teamName, scoreObj) => {
+      const pts     = scoreObj?.score ?? '—';
+      const owner   = findOwner(teamName);
+      const parts   = (teamName || '').split(' ');
+      const seed    = parts.length > 1 && !isNaN(parts[0]) ? parts[0] : '';
+      const name    = seed ? parts.slice(1).join(' ') : teamName;
+      return `
+        <div class="score-row">
+          <div style="display:flex;align-items:center;gap:8px">
+            ${seed ? `<span style="font-size:11px;color:var(--muted);min-width:16px">${seed}</span>` : ''}
+            <div>
+              <div class="score-team">${name}</div>
+              ${owner ? `<div style="font-size:11px;color:var(--muted)">${owner}</div>` : ''}
+            </div>
+          </div>
+          <span class="score-pts" style="color:${isLive ? 'var(--live)' : 'var(--text)'}">${pts}</span>
+        </div>`;
+    };
+
+    const h = scores.find(s => s.name === game.home_team);
+    const a = scores.find(s => s.name === game.away_team);
+
+    return `
+      <div class="score-card ${isFinal ? 'final-game' : isLive ? 'live-game' : ''}">
+        <div class="score-card-header">
+          ${statusBadge}
+          ${spreadFav
+            ? `<span style="font-size:12px">
+                <span style="color:var(--muted)">Spread: </span>
+                <span style="color:var(--accent);font-weight:700">${spreadFav} ${spreadLine}</span>
+               </span>`
+            : `<span style="color:var(--muted);font-size:11px">Spread pending</span>`
+          }
+        </div>
+        ${buildRow(game.away_team, a)}
+        ${buildRow(game.home_team, h)}
+      </div>`;
+  }).join('');
+}
+
+
+/* ==============================================================
+   12. AUTO-REFRESH
+   ==============================================================
+   Uses setInterval to fetch data every 30 seconds.
+   Also runs a 1-second countdown timer for the nav display.
+   ============================================================== */
+let _refreshInterval  = null;
+let _countdownInterval= null;
+let _countdownVal     = 30;
+
+function startAutoRefresh() {
+  if (!state.apiKey) return;
+  fetchAndSync(); // just fetch once on load
+}
+
+function updateCountdown() {
+  const el = document.getElementById('countdown-val');
+  if (el) el.textContent = _countdownVal;
+}
+
+// Update the live indicator badge in the nav
+function updateLiveBadge() {
+  const hasLive = state.scoresCache?.some(g => !g.completed && g.scores?.length > 0);
+  const badge   = document.getElementById('live-badge');
+  if (badge) badge.style.display = hasLive ? 'block' : 'none';
+}
+
+
+/* ==============================================================
+   API KEY MANAGEMENT
+   ============================================================== */
+
+function updateApiDot(ok) {
+  const dot    = document.getElementById('api-dot');
+  const status = document.getElementById('api-status');
+  dot.className = 'api-dot' + (ok ? ' ok' : '');
+  status.textContent = state.apiKey ? (ok ? 'API connected' : 'API key set') : 'No API key';
+}
+
+
+/* ==============================================================
+   SAMPLE DATA (for testing without a full draft)
+   ============================================================== */
+function loadSampleData() {
+  const names = ['Alex','Blake','Casey','Dana','Evan','Fiona','Gabe','Hana',
+                 'Ivan','Jess','Kyle','Luna','Mike','Nora','Owen','Pam'];
+  state.players = names.map(n => ({name: n}));
+
+  // Fill player input fields
+  names.forEach((n, i) => {
+    const el = document.getElementById('p' + i);
+    if (el) el.value = n;
+  });
+
+  state.draft      = {};
+  state.ownership  = {};
+  state.eliminated = {};
+  state.roundsWon  = {};
+
+  names.forEach((n, i) => {
+    state.draft[n]     = {};
+    state.roundsWon[n] = 0;
+    REGIONS.forEach(r => { state.draft[n][r] = DEFAULT_TEAMS[r][i]; });
+  });
+
+  REGIONS.forEach(r => {
+    state.ownership[r]  = {};
+    state.eliminated[r] = new Set();
+    names.forEach((n, i) => { state.ownership[r][DEFAULT_TEAMS[r][i]] = n; });
+  });
+
+  initBracket();
+
+  // Seed realistic-ish spreads for round 1
+  REGIONS.forEach(r => {
+    const spreads = [-18.5,-14.5,-10.5,-8.5,-3.5,-2.5,1.5,0.5];
+    state.bracket[r][1].forEach((m, i) => { m.spread = spreads[i] || -1.5; });
+  });
+
+  saveState();
+  buildDraftTable();
+  showMsg('save-msg', '✓ Sample data loaded! Go to the Bracket tab.', 'success');
+}
+
+
+/* ==============================================================
+   EXPORT & IMPORT
+   Full state serialized as JSON — back it up or share with friends.
+   ============================================================== */
+function exportData() {
+  const json = JSON.stringify(state, (k, v) => v instanceof Set ? [...v] : v, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'madness_challenge.json';
+  a.click();
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const s = JSON.parse(ev.target.result);
+      // Revive Sets
+      if (s.eliminated) {
+        Object.keys(s.eliminated).forEach(r => { s.eliminated[r] = new Set(s.eliminated[r]); });
+      }
+      Object.assign(state, s);
+      saveState();
+      initSetup();
+      alert('Imported successfully!');
+    } catch (err) {
+      alert('Invalid file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+/* ==============================================================
+   UTILITY: showMsg(elementId, message, type)
+   Quick helper to set a message element with color class.
+   type: 'success' | 'danger' | 'muted'
+   ============================================================== */
+function showMsg(id, msg, type = 'muted') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className   = `text-sm text-${type}`;
+}
+
+
+loadState();      // restore state from localStorage
+
+// ============================================================
+// HARDCODED DRAFT
+// ============================================================
+function loadHardcodedDraft() {
+  const players = ['Ryder','Hopp','Easton','Quinton','Smitty','Connor',
+                   'Tryston','Carson V','Drew','Aaron','Jace','Jonny',
+                   'Nate','Ben','Jolly','Garrett'];
+
+  const draft = {
+    'Ryder':   { East:'1 Duke',            West:'9 Utah St',      South:'TBD',             Midwest:'4 Alabama'       },
+    'Hopp':    { East:'2 UConn',           West:'15 Queens',      South:'4 Nebraska',      Midwest:'TBD'             },
+    'Easton':  { East:'3 Michigan St',     West:'6 BYU',          South:'3 Illinois',      Midwest:'10 Santa Clara'  },
+    'Quinton': { East:'4 Kansas',          West:'8 Villanova',    South:'11 VCU',          Midwest:'7 Kentucky'      },
+    'Smitty':  { East:'5 St Johns',        West:'16 LIU',         South:'12 McNeese',      Midwest:'3 Virginia'      },
+    'Connor':  { East:'6 Louisville',      West:'12 High Point',  South:'13 Troy',         Midwest:'12 Akron'        },
+    'Tryston': { East:'7 UCLA',            West:'3 Gonzaga',      South:'2 Houston',       Midwest:'13 Hofstra'      },
+    'Carson V':{ East:'8 Ohio St',         West:'TBD',            South:'1 Florida',       Midwest:'14 Wright St'    },
+    'Drew':    { East:'9 TCU',             West:'10 Missouri',    South:'6 North Carolina', Midwest:'8 Georgia'      },
+    'Aaron':   { East:'10 UCF',            West:'2 Purdue',       South:'8 Clemson',       Midwest:'9 Saint Louis'   },
+    'Jace':    { East:'11 South Florida',  West:'14 Kennesaw St', South:'9 Iowa',          Midwest:'5 Texas Tech'    },
+    'Jonny':   { East:'12 Northern Iowa',  West:'1 Arizona',      South:'15 Idaho',        Midwest:'2 Iowa St'       },
+    'Nate':    { East:'13 Cal Baptist',    West:'5 Wisconsin',    South:'7 Saint Marys',   Midwest:'15 Tennessee St' },
+    'Ben':     { East:'14 North Dakota St',West:'13 Hawaii',      South:'14 Penn',         Midwest:'1 Michigan'      },
+    'Jolly':   { East:'15 Furman',         West:'7 Miami FL',     South:'5 Vanderbilt',    Midwest:'TBD'             },
+    'Garrett': { East:'16 Siena',          West:'4 Arkansas',     South:'10 Texas A&M',    Midwest:'6 Tennessee'     },
+  };
+
+  if (localStorage.getItem('mm_state')) return;
+
+  state.players    = players.map(n => ({ name: n }));
+  state.draft      = draft;
+  state.ownership  = {};
+  state.eliminated = {};
+  state.roundsWon  = {};
+
+  players.forEach(n => { state.roundsWon[n] = 0; });
+  REGIONS.forEach(r => {
+    state.ownership[r]  = {};
+    state.eliminated[r] = new Set();
+    players.forEach(n => {
+      const team = draft[n][r];
+      if (team && team !== 'TBD') state.ownership[r][team] = n;
+    });
+  });
+
+  initBracket();
+  saveState();
+}
+loadHardcodedDraft();
+
+initSetup();      // build player inputs + draft table
+
+// If we already have an API key, connect and start auto-refresh
+if (state.apiKey) {
+  updateApiDot(true);
+  startAutoRefresh();
+  fetchAndSync();   // immediate first fetch
+}
+</script>
+</body>
+</html>
