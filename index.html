@@ -1067,10 +1067,18 @@ function matchSpreadsTobracket(games) {
             matchup.spread = -homeSpread;
           }
 
-          // Lock spread at 9am EDT — after that lockedSpread never changes
+          // Lock each game's spread at 11am EDT on its game day
           const now = new Date();
-          const nowET = new Date(now.getTime() + (-4 * 60 * 60 * 1000)); // EDT = UTC-4
-          const lockPassed = nowET.getUTCHours() >= 9;
+          const nowET = new Date(now.getTime() + (-4 * 60 * 60 * 1000));
+          const gameDate = new Date(game.commence_time);
+          const gameDateET = new Date(gameDate.getTime() + (-4 * 60 * 60 * 1000));
+          
+          // Same calendar day in ET and past 11am ET
+          const sameDay = nowET.getUTCFullYear() === gameDateET.getUTCFullYear() &&
+                          nowET.getUTCMonth()    === gameDateET.getUTCMonth() &&
+                          nowET.getUTCDate()     === gameDateET.getUTCDate();
+          const lockPassed = sameDay && nowET.getUTCHours() >= 11;
+
           if (!lockPassed) {
             matchup.lockedSpread = matchup.spread;
           }
