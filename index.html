@@ -202,7 +202,6 @@ tr:last-child td{border-bottom:none}
         <h1 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:3px">Live Scores</h1>
       </div>
       <button class="btn-secondary btn-sm" onclick="fetchAndSync()">⟳ Sync</button>
-      <button class="btn-secondary btn-sm" onclick="alert('West R1: ' + state.bracket.West[1].map(m => m.team1.replace(/^\d+\s+/,'') + ' vs ' + m.team2.replace(/^\d+\s+/,'') + ' spread:' + m.spread + ' locked:' + m.lockedSpread).join('\n'))">🔍 Debug</button>
     </div>
     <div class="scores-grid" id="scores-grid"><div class="no-data">Add your API key in Setup.</div></div>
   </div>
@@ -794,7 +793,6 @@ function initSetup() {
   // Pre-fill API key if saved
   const keyInput = document.getElementById('api-key-input');
   if (keyInput && state.apiKey) keyInput.value = state.apiKey;
-  updateApiDot(false);
 }
 
 
@@ -989,7 +987,6 @@ async function fetchAndSync() {
     matchScoresToBracket(scoresData);
 
     saveState();
-    updateApiDot(true);
     renderBracket();
     renderScoresPage();
     renderLeaderboard();
@@ -1771,12 +1768,7 @@ function updateLiveBadge() {
    API KEY MANAGEMENT
    ============================================================== */
 
-function updateApiDot(ok) {
-  const dot    = document.getElementById('api-dot');
-  const status = document.getElementById('api-status');
-  dot.className = 'api-dot' + (ok ? ' ok' : '');
-  status.textContent = state.apiKey ? (ok ? 'API connected' : 'API key set') : 'No API key';
-}
+
 
 
 /* ==============================================================
@@ -1933,8 +1925,6 @@ renderScoresPage();
 renderLeaderboard();
 updateLiveBadge();
 
-// If we already have an API key, connect and start auto-refresh
-updateApiDot(true);
 startAutoRefresh();
 </script>
 </body>
