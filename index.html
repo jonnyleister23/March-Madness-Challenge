@@ -418,6 +418,9 @@ function showPage(id) {
   document.querySelectorAll('.btab').forEach(t => {
     t.classList.toggle('active', t.id === 'btab-' + id);
   });
+  // Reset scroll on all pages when switching tabs
+  document.querySelectorAll('.page-content').forEach(p => p.scrollTop = 0);
+  window.scrollTo(0, 0);
   if (id === 'bracket') {
     renderBracket();
     // Force scroll reset on all round panels — fixes iOS PWA scroll lock
