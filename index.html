@@ -841,6 +841,12 @@ function saveDraft() {
   showMsg('save-msg', '✓ Draft saved! Head to the Bracket tab.', 'success');
 }
 
+const LOCKED_SPREADS = {
+  East:    [-27.5, -2.5, -10.5, -14.5, -4.5, -16.5, -5.5, -20.5],
+  South:   [null,   2.5, -11.5, -13.5,  -2.5, -22.5, -3.5, -23.5],
+  West:    [-29.5,  1.5, -11.5, -15.5,  null, -19.5,  -1.5, -23.5],
+  Midwest: [null,  -2.5,  -7.5, -11.5,  null, -17.5,  -3.5, -24.5],
+};
 // Set up the bracket data structure with Round 1 matchups.
 // Rounds 2-6 start empty and get populated as winners advance.
 function initBracket() {
@@ -851,11 +857,12 @@ function initBracket() {
 
     // Round 1: pair teams using R1_PAIRS
     state.bracket[region][1] = R1_PAIRS.map(([a, b], idx) => ({
-      team1:  teams[a],
-      team2:  teams[b],
-      spread: null,       // filled in by API or manually
-      result: null,       // {score1, score2, winner} set when game ends
-      gameId: null,       // API game ID for live score matching
+      team1:        teams[a],
+      team2:        teams[b],
+      spread:       LOCKED_SPREADS[region]?.[idx] ?? null,
+      lockedSpread: LOCKED_SPREADS[region]?.[idx] ?? null,
+      result:       null,
+      gameId:       null,
     }));
 
     // Empty placeholders for future rounds
@@ -1209,8 +1216,9 @@ function processResult(region, round, idx, score1, score2) {
   const matchup = state.bracket[region][round][idx];
   const spread  = matchup.spread;
 
-  const team1Covered = didCoverSpread(score1, score2, spread);
-
+  const spreadToUse  = (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
+                     ? matchup.lockedSpread : spread;
+  const team1Covered = didCoverSpread(score1, score2, spreadToUse);
   // The team that covered the spread is the "winner" for our purposes
   const spreadWinner = team1Covered ? matchup.team1 : matchup.team2;
   const spreadLoser  = team1Covered ? matchup.team2 : matchup.team1;
