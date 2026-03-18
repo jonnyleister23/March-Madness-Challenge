@@ -1924,7 +1924,12 @@ function loadHardcodedDraft() {
 }
 loadHardcodedDraft();
 
-initSetup();      // build player inputs + draft table
+initSetup(); // build player inputs + draft table
+
+renderBracket();
+renderScoresPage();
+renderLeaderboard();
+updateLiveBadge();
 
 // If we already have an API key, connect and start auto-refresh
 updateApiDot(true);
