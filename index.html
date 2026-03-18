@@ -400,6 +400,7 @@ let state = {
    since JSON.stringify can't handle Set natively.
    ============================================================== */
 function saveState() {
+  state.version = APP_VERSION;
   localStorage.setItem('mm_state', JSON.stringify(state, (k, v) => v instanceof Set ? [...v] : v));
 }
 
@@ -1761,7 +1762,24 @@ function showMsg(id, msg, type = 'muted') {
 }
 
 
-loadState();      // restore state from localStorage
+const APP_VERSION = 2; // bump this number whenever you change LOCKED_SPREADS
+loadState();
+if (state.version !== APP_VERSION) {
+  // Spreads updated — wipe bracket only, keep nothing
+  localStorage.removeItem('mm_state');
+  state = {
+    apiKey:     '2cc99c7f5440c3a09653dda72c99547f',
+    players:    [],
+    draft:      {},
+    ownership:  {},
+    eliminated: {},
+    roundsWon:  {},
+    bracket:    {},
+    scoresCache:[],
+    lastFetch:  null,
+    version:    APP_VERSION,
+  };
+}
 
 // ============================================================
 // HARDCODED DRAFT
