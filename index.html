@@ -1759,8 +1759,7 @@ let _countdownInterval= null;
 let _countdownVal     = 30;
 
 function startAutoRefresh() {
-  if (!state.apiKey) return;
-  fetchAndSync(); // just fetch once on load
+  fetchAndSync(); 
 }
 
 function updateCountdown() {
