@@ -1,3 +1,5 @@
+const cache = new Map();
+
 export default async (req, context) => {
   try {
     const apiKey = process.env.ODDS_API_KEY;
@@ -13,13 +15,14 @@ export default async (req, context) => {
     }
 
     const url = new URL(req.url);
-
     const type = url.searchParams.get('type') || 'odds';
 
     let targetUrl;
+    let ttlSeconds;
 
     if (type === 'scores') {
       const daysFrom = url.searchParams.get('daysFrom') || '3';
+      ttlSeconds = 60;
 
       targetUrl =
         `https://api.the-odds-api.com/v4/sports/basketball_ncaab/scores/` +
@@ -30,6 +33,7 @@ export default async (req, context) => {
       const markets = url.searchParams.get('markets') || 'spreads';
       const oddsFormat = url.searchParams.get('oddsFormat') || 'american';
       const bookmakers = url.searchParams.get('bookmakers') || 'draftkings';
+      ttlSeconds = 600;
 
       targetUrl =
         `https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/` +
@@ -40,17 +44,38 @@ export default async (req, context) => {
         `&bookmakers=${encodeURIComponent(bookmakers)}`;
     }
 
+    const cacheKey = `${type}:${url.search}`;
+    const now = Date.now();
+    const cached = cache.get(cacheKey);
+
+    if (cached && cached.expiresAt > now) {
+      return new Response(cached.body, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': `public, max-age=${ttlSeconds}`
+        }
+      });
+    }
+
     const response = await fetch(targetUrl, {
       headers: { Accept: 'application/json' }
     });
 
     const text = await response.text();
 
+    if (response.ok) {
+      cache.set(cacheKey, {
+        body: text,
+        expiresAt: now + ttlSeconds * 1000
+      });
+    }
+
     return new Response(text, {
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store'
+        'Cache-Control': `public, max-age=${ttlSeconds}`
       }
     });
   } catch (error) {
