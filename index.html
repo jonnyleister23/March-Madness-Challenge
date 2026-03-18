@@ -325,7 +325,7 @@ const R1_PAIRS = [
 const ROUND_NAMES = {1:'Round of 64',2:'Round of 32',3:'Sweet 16',4:'Elite Eight',5:'Final Four',6:'Championship'};
 
 const SYNC_COOLDOWN_MS = 300000; // 5 minutes
-let lastSyncAttempt = 0;
+let lastSyncAttempt = parseInt(localStorage.getItem('lastSyncAttempt') || '0');
 /* ==============================================================
    2. STATE OBJECT
    ==============================================================
@@ -930,26 +930,29 @@ async function fetchAndSync() {
 
   if (now - lastSyncAttempt < SYNC_COOLDOWN_MS) {
     const remainingMs = SYNC_COOLDOWN_MS - (now - lastSyncAttempt);
-    const secsLeft = Math.ceil(remainingMs / 1000);
 
     const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
-    btns.forEach(b => {
-      b.textContent = `⏳ ${secsLeft}s`;
-      b.disabled = true;
-    });
+    btns.forEach(b => { b.disabled = true; });
 
-    setTimeout(() => {
-      const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
-      btns.forEach(b => {
-        b.textContent = '⟳ Sync';
-        b.disabled = false;
-      });
-    }, remainingMs);
+    // Count down every second
+    let secsLeft = Math.ceil(remainingMs / 1000);
+    btns.forEach(b => { b.textContent = `⏳ ${secsLeft}s`; });
+
+    const ticker = setInterval(() => {
+      secsLeft--;
+      if (secsLeft <= 0) {
+        clearInterval(ticker);
+        btns.forEach(b => { b.textContent = '⟳ Sync'; b.disabled = false; });
+      } else {
+        btns.forEach(b => { b.textContent = `⏳ ${secsLeft}s`; });
+      }
+    }, 1000);
 
     return;
   }
 
   lastSyncAttempt = now;
+  localStorage.setItem('lastSyncAttempt', now);
 
   const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
   btns.forEach(b => {
