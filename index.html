@@ -840,9 +840,12 @@ function saveDraft() {
   saveState();
   showMsg('save-msg', '✓ Draft saved! Head to the Bracket tab.', 'success');
 }
-
+// HARDCODED SPREADS — update before each round
+// Set these from DraftKings before games tip off
+// Format: team1's spread (negative = team1 favored)
+// Order matches R1_PAIRS: 1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15
 const LOCKED_SPREADS = {
-  East:    [-27.5, -2.5, -10.5, -14.5, -4.5, -16.5, -5.5, -20.5],
+  East:    [-27.5, -12.5, -10.5, -14.5, -4.5, -16.5, -5.5, -20.5],
   South:   [null,   2.5, -11.5, -13.5,  -2.5, -22.5, -3.5, -23.5],
   West:    [-29.5,  1.5, -11.5, -15.5,  null, -19.5,  -1.5, -23.5],
   Midwest: [null,  -2.5,  -7.5, -11.5,  null, -17.5,  -3.5, -24.5],
