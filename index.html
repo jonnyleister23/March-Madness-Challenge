@@ -582,8 +582,6 @@ function buildMatchupCard(m, region, round, idx) {
     footerLeft = `<span class="badge badge-alive">Final</span>`;
   } else if (m.liveScore && !m.liveScore.completed) {
     footerLeft = `<span class="badge badge-live">Live</span>`;
-  } else if (m.spread !== null) {
-    footerLeft = `<span style="color:var(--muted)">Spread set</span>`;
   }
 
   // Safe JSON for onclick
@@ -614,7 +612,6 @@ function buildMatchupCard(m, region, round, idx) {
       </div>
       <div class="matchup-footer">
         ${footerLeft}
-        <span style="color:var(--muted);font-size:11px">Tap to enter result</span>
       </div>
     </div>`;
 }
