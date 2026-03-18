@@ -400,7 +400,6 @@ let state = {
    since JSON.stringify can't handle Set natively.
    ============================================================== */
 function saveState() {
-  state.version = APP_VERSION;
   localStorage.setItem('mm_state', JSON.stringify(state, (k, v) => v instanceof Set ? [...v] : v));
 }
 
@@ -842,16 +841,7 @@ function saveDraft() {
   saveState();
   showMsg('save-msg', '✓ Draft saved! Head to the Bracket tab.', 'success');
 }
-// HARDCODED SPREADS — update before each round
-// Set these from DraftKings before games tip off
-// Format: team1's spread (negative = team1 favored)
-// Order matches R1_PAIRS: 1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15
-const LOCKED_SPREADS = {
-  East:    [-27.5, -12.5, -10.5, -14.5, -4.5, -16.5, -5.5, -20.5],
-  South:   [null,   2.5, -11.5, -13.5,  -2.5, -22.5, -3.5, -23.5],
-  West:    [-29.5,  1.5, -11.5, -15.5,  null, -19.5,  -1.5, -23.5],
-  Midwest: [null,  -2.5,  -7.5, -11.5,  null, -17.5,  -3.5, -24.5],
-};
+
 // Set up the bracket data structure with Round 1 matchups.
 // Rounds 2-6 start empty and get populated as winners advance.
 function initBracket() {
@@ -861,11 +851,11 @@ function initBracket() {
     const teams = DEFAULT_TEAMS[region];
 
     // Round 1: pair teams using R1_PAIRS
-    state.bracket[region][1] = R1_PAIRS.map(([a, b], idx) => ({
+    state.bracket[region][1] = R1_PAIRS.map(([a, b]) => ({
       team1:        teams[a],
       team2:        teams[b],
-      spread:       LOCKED_SPREADS[region]?.[idx] ?? null,
-      lockedSpread: LOCKED_SPREADS[region]?.[idx] ?? null,
+      spread:       null,
+      lockedSpread: null,
       result:       null,
       gameId:       null,
     }));
@@ -1077,8 +1067,11 @@ function matchSpreadsTobracket(games) {
             matchup.spread = -homeSpread;
           }
 
-          // Only set lockedSpread if not already set from LOCKED_SPREADS
-          if (matchup.lockedSpread === null || matchup.lockedSpread === undefined) {
+          // Lock spread at 9am EDT — after that lockedSpread never changes
+          const now = new Date();
+          const nowET = new Date(now.getTime() + (-4 * 60 * 60 * 1000)); // EDT = UTC-4
+          const lockPassed = nowET.getUTCHours() >= 9;
+          if (!lockPassed) {
             matchup.lockedSpread = matchup.spread;
           }
           
@@ -1768,27 +1761,8 @@ function showMsg(id, msg, type = 'muted') {
 }
 
 
-const APP_VERSION = 4;
+
 loadState();
-if (state.version !== APP_VERSION) {
-  localStorage.removeItem('mm_state');
-  // Force a hard reload to bust the PWA cache
-  if (!window.location.search.includes('v=' + APP_VERSION)) {
-    window.location.replace(window.location.pathname + '?v=' + APP_VERSION);
-  }
-  state = {
-    apiKey:     '2cc99c7f5440c3a09653dda72c99547f',
-    players:    [],
-    draft:      {},
-    ownership:  {},
-    eliminated: {},
-    roundsWon:  {},
-    bracket:    {},
-    scoresCache:[],
-    lastFetch:  null,
-    version:    APP_VERSION,
-  };
-}
 
 // ============================================================
 // HARDCODED DRAFT
