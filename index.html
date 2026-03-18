@@ -567,9 +567,10 @@ function buildMatchupCard(m, region, round, idx) {
   const state2 = m.result
     ? (m.result.spreadWinner === m.team2 ? 'won' : 'lost') : (m.liveScore ? 'live-row' : '');
 
-  // Spread: show on top team only
-  const spreadTxt = m.spread !== null && m.spread !== undefined
-    ? (m.spread > 0 ? `+${m.spread}` : `${m.spread}`) : '';
+  const spreadVal = (m.lockedSpread !== undefined && m.lockedSpread !== null)
+                  ? m.lockedSpread : m.spread;
+  const spreadTxt = spreadVal !== null && spreadVal !== undefined
+    ? (spreadVal > 0 ? `+${spreadVal}` : `${spreadVal}`) : '';
 
   // Live/final score
   let score1Txt = '', score2Txt = '', scoreCls = '';
@@ -1076,6 +1077,11 @@ function matchSpreadsTobracket(games) {
             matchup.spread = -homeSpread;
           }
 
+          // Only set lockedSpread if not already set from LOCKED_SPREADS
+          if (matchup.lockedSpread === null || matchup.lockedSpread === undefined) {
+            matchup.lockedSpread = matchup.spread;
+          }
+          
           // Always store gameId so scores can find this matchup later
           matchup.gameId = game.id;
         });
