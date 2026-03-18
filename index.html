@@ -112,6 +112,47 @@ tr:last-child td{border-bottom:none}
 .lb-rank{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--muted)}
 .lb-rank.top3{color:var(--accent)}
 .lb-score{font-family:'Bebas Neue',sans-serif;font-size:1.1rem}
+.lb-player-btn{
+  background:none;
+  border:none;
+  color:var(--text);
+  font:inherit;
+  font-weight:600;
+  padding:0;
+  min-height:auto;
+  cursor:pointer;
+  text-align:left;
+}
+
+.lb-player-btn:hover{
+  color:var(--accent);
+}
+
+.lb-detail-row td{
+  background:rgba(255,255,255,.02);
+  padding:.65rem .75rem .8rem;
+}
+
+.lb-team-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.lb-team-chip{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  font-size:12px;
+  color:var(--text);
+}
+
+.lb-no-teams{
+  font-size:12px;
+  color:var(--muted);
+}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:flex-end;justify-content:center}
 .modal-overlay.open{display:flex}
@@ -1460,7 +1501,47 @@ function confirmResult() {
   renderLeaderboard();
 }
 
+let expandedPlayers = new Set();
 
+function togglePlayerTeams(playerName) {
+  if (expandedPlayers.has(playerName)) {
+    expandedPlayers.delete(playerName);
+  } else {
+    expandedPlayers.add(playerName);
+  }
+  renderLeaderboard();
+}
+
+function getCurrentTeamsForPlayer(playerName) {
+  const teams = [];
+
+  for (const region of REGIONS) {
+    const ownerMap = state.ownership[region] || {};
+    for (const [team, owner] of Object.entries(ownerMap)) {
+      if (owner === playerName) {
+        teams.push({ region, team });
+      }
+    }
+  }
+
+  const regionOrder = { East: 0, South: 1, West: 2, Midwest: 3 };
+
+  teams.sort((a, b) => {
+    if (regionOrder[a.region] !== regionOrder[b.region]) {
+      return regionOrder[a.region] - regionOrder[b.region];
+    }
+
+    const seedA = parseInt((a.team.match(/^\d+/) || ['99'])[0], 10);
+    const seedB = parseInt((b.team.match(/^\d+/) || ['99'])[0], 10);
+    return seedA - seedB;
+  });
+
+  return teams;
+}
+
+function formatTeamName(team) {
+  return team.replace(/^\d+\s+/, '');
+}
 /* ==============================================================
    10. LEADERBOARD
    ============================================================== */
@@ -1469,57 +1550,77 @@ function renderLeaderboard() {
   if (!tbody) return;
 
   if (!state.players.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No players yet — go to Setup.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="no-data">No players yet — go to Setup.</td></tr>';
     return;
   }
 
-  // Build and sort player rows
   const rows = state.players.map(p => {
     const name = p.name;
     const regionStatuses = REGIONS.map(r => {
-      if (!state.draft[name]?.[r])    return 'pending';
+      if (!state.draft[name]?.[r]) return 'pending';
       if ((state.eliminated[r] || new Set()).has(name)) return 'out';
       return 'alive';
     });
     const aliveCount = regionStatuses.filter(s => s === 'alive').length;
-    return { name, regionStatuses, aliveCount, rounds: state.roundsWon[name] || 0 };
+    return {
+      name,
+      regionStatuses,
+      aliveCount,
+      rounds: state.roundsWon[name] || 0,
+      currentTeams: getCurrentTeamsForPlayer(name)
+    };
   }).sort((a, b) => b.aliveCount - a.aliveCount || b.rounds - a.rounds);
 
-  tbody.innerHTML = rows.map((row, i) => `
-    <tr>
-      <td><span class="lb-rank ${i < 3 ? 'top3' : ''}">${i + 1}</span></td>
-      <td><strong>${row.name}</strong></td>
-      <td>
-        <span class="lb-score text-accent">${row.aliveCount}</span>
-        <span class="text-muted text-sm"> / 4</span>
-      </td>
-      ${row.regionStatuses.map(s => `
-        <td>
-          <span class="badge badge-${s === 'alive' ? 'alive' : s === 'out' ? 'out' : 'tbd'}">
-            ${s}
-          </span>
-        </td>
-      `).join('')}
-      <td><span class="lb-score">${row.rounds}</span></td>
-      <td>
-        <span class="badge ${row.aliveCount > 0 ? 'badge-alive' : 'badge-out'}">
-          ${row.aliveCount > 0 ? 'Active' : 'Eliminated'}
-        </span>
-      </td>
-    </tr>
-  `).join('');
-}
-// Finds which player currently owns a team by fuzzy name matching
-function findOwner(apiTeamName) {
-  for (const region of REGIONS) {
-    const ownerMap = state.ownership[region] || {};
-    for (const [bracketName, owner] of Object.entries(ownerMap)) {
-      if (teamsMatch(apiTeamName, bracketName)) return owner;
-    }
-  }
-  return null;
-}
+  let html = '';
 
+  rows.forEach((row, i) => {
+    const isOpen = expandedPlayers.has(row.name);
+
+    html += `
+      <tr>
+        <td><span class="lb-rank ${i < 3 ? 'top3' : ''}">${i + 1}</span></td>
+        <td>
+          <button class="lb-player-btn" onclick="togglePlayerTeams('${row.name.replace(/'/g, "\\'")}')">
+            ${row.name} ${isOpen ? '▾' : '▸'}
+          </button>
+        </td>
+        <td>
+          <span class="lb-score text-accent">${row.aliveCount}</span>
+          <span class="text-muted text-sm"> / 4</span>
+        </td>
+        ${row.regionStatuses.map(s => `
+          <td>
+            <span class="badge badge-${s === 'alive' ? 'alive' : s === 'out' ? 'out' : 'tbd'}">
+              ${s}
+            </span>
+          </td>
+        `).join('')}
+        <td><span class="lb-score">${row.rounds}</span></td>
+      </tr>
+    `;
+
+    if (isOpen) {
+      html += `
+        <tr class="lb-detail-row">
+          <td></td>
+          <td colspan="7">
+            ${
+              row.currentTeams.length
+                ? `<div class="lb-team-list">
+                    ${row.currentTeams.map(t => `
+                      <span class="lb-team-chip">${t.region}: ${formatTeamName(t.team)}</span>
+                    `).join('')}
+                  </div>`
+                : `<div class="lb-no-teams">No teams currently owned.</div>`
+            }
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  tbody.innerHTML = html;
+}
 /* ==============================================================
    11. SCORES PAGE
    ============================================================== */
