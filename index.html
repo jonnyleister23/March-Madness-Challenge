@@ -1083,80 +1083,82 @@ function matchSpreadsTobracket(games) {
     const home = game.home_team;
     const away = game.away_team;
 
-    const bk  = game.bookmakers?.[0];
+    const bk = game.bookmakers?.[0];
     const mkt = bk?.markets?.find(m => m.key === 'spreads');
     if (!mkt) return;
 
     const homeOutcome = mkt.outcomes?.find(o => o.name === home);
-    const awayOutcome = mkt.outcomes?.find(o => o.name === away);
-    const homeSpread  = homeOutcome?.point ?? null;
+    const homeSpread = homeOutcome?.point ?? null;
     if (homeSpread === null) return;
 
     REGIONS.forEach(region => {
       [1,2,3,4,5,6].forEach(round => {
         (state.bracket[region]?.[round] || []).forEach(matchup => {
-          if (matchup.result) return;
+          if (!matchup || matchup.result) return;
 
           const t1isHome = teamsMatch(home, matchup.team1);
           const t1isAway = teamsMatch(away, matchup.team1);
           const t2isHome = teamsMatch(home, matchup.team2);
           const t2isAway = teamsMatch(away, matchup.team2);
 
-          // Need one team on each side to confirm it's the right game
           if (!((t1isHome && t2isAway) || (t1isAway && t2isHome))) return;
 
-          // Set spread from team1's perspective
-          if (t1isHome) {
-            matchup.spread = homeSpread;
-          } else {
-            matchup.spread = -homeSpread;
-          }
+          const latestSpread = t1isHome ? homeSpread : -homeSpread;
 
-                   const now = new Date();
+          const now = new Date();
           const gameTime = new Date(game.commence_time);
 
-          const etPartsNow = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/New_York',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            hour12: false
-          }).formatToParts(now);
+          const nowParts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-US', {
+              timeZone: 'America/New_York',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }).formatToParts(now).map(p => [p.type, p.value])
+          );
 
-          const etPartsGame = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/New_York',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }).formatToParts(gameTime);
-
-          const nowET = Object.fromEntries(etPartsNow.map(p => [p.type, p.value]));
-          const gameET = Object.fromEntries(etPartsGame.map(p => [p.type, p.value]));
+          const gameParts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-US', {
+              timeZone: 'America/New_York',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).formatToParts(gameTime).map(p => [p.type, p.value])
+          );
 
           const sameGameDayET =
-            nowET.year === gameET.year &&
-            nowET.month === gameET.month &&
-            nowET.day === gameET.day;
+            nowParts.year === gameParts.year &&
+            nowParts.month === gameParts.month &&
+            nowParts.day === gameParts.day;
 
-          const afterLockTimeET = Number(nowET.hour) >= 11;
-          const lockPassed = sameGameDayET && afterLockTimeET;
+          const afterLockTimeET =
+            Number(nowParts.hour) > 11 ||
+            (Number(nowParts.hour) === 11 && Number(nowParts.minute) >= 0);
 
-          // Always show the latest live spread in the UI until lock time
-          matchup.spread = t1isHome ? homeSpread : -homeSpread;
+          const locked = sameGameDayET && afterLockTimeET;
 
-          // Freeze the spread only until 11:00 AM ET on game day
-          if (!lockPassed) {
-            matchup.lockedSpread = matchup.spread;
-          }
-          
-          // Always store gameId so scores can find this matchup later
           matchup.gameId = game.id;
+
+          if (!locked) {
+            matchup.spread = latestSpread;
+            matchup.lockedSpread = latestSpread;
+            return;
+          }
+
+          if (matchup.lockedSpread === null || matchup.lockedSpread === undefined) {
+            matchup.lockedSpread = latestSpread;
+          }
+
+          matchup.spread = matchup.lockedSpread;
         });
       });
     });
   });
-  // Match spreads for First Four games and store on the FIRST_FOUR objects
+
+  // First Four spreads
   games.forEach(game => {
     const ff = FIRST_FOUR.find(f =>
       (teamsMatch(game.home_team, f.team1) || teamsMatch(game.home_team, f.team2)) &&
@@ -1164,14 +1166,14 @@ function matchSpreadsTobracket(games) {
     );
     if (!ff) return;
 
-    const bk  = game.bookmakers?.[0];
+    const bk = game.bookmakers?.[0];
     const mkt = bk?.markets?.find(m => m.key === 'spreads');
     if (!mkt) return;
 
     const t1Outcome = mkt.outcomes?.find(o => teamsMatch(o.name, ff.team1));
     if (t1Outcome) {
-      ff.spread     = t1Outcome.point;
-      ff.gameId     = game.id;
+      ff.spread = t1Outcome.point;
+      ff.gameId = game.id;
     }
   });
 }
@@ -1292,48 +1294,44 @@ function didCoverSpread(score1, score2, spread) {
 // Process a completed game: determine winner, update ownership, eliminate loser's owner, advance
 function processResult(region, round, idx, score1, score2) {
   const matchup = state.bracket[region][round][idx];
-  const spread  = matchup.spread;
 
-  const spreadToUse  = (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
-                     ? matchup.lockedSpread : spread;
+  const spreadToUse =
+    (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
+      ? matchup.lockedSpread
+      : matchup.spread;
+
   const team1Covered = didCoverSpread(score1, score2, spreadToUse);
-  // The team that covered the spread is the "winner" for our purposes
   const spreadWinner = team1Covered ? matchup.team1 : matchup.team2;
-  const spreadLoser  = team1Covered ? matchup.team2 : matchup.team1;
+  const spreadLoser = team1Covered ? matchup.team2 : matchup.team1;
 
-  // The team that actually won the game advances in the bracket
-  // (higher score wins regardless of spread)
   const gameWinner = score1 > score2 ? matchup.team1 : matchup.team2;
 
-  // Save the result — game winner advances, spread winner gets credit
-  matchup.result = { score1, score2, winner: gameWinner, spreadWinner };
-  // Snapshot who owned each team going INTO this game
+  matchup.result = {
+    score1,
+    score2,
+    winner: gameWinner,
+    spreadWinner
+  };
+
   matchup.owner1 = state.ownership[region]?.[matchup.team1] || '—';
   matchup.owner2 = state.ownership[region]?.[matchup.team2] || '—';
 
   const spreadWinnerOwner = state.ownership[region]?.[spreadWinner];
-  const spreadLoserOwner  = state.ownership[region]?.[spreadLoser];
+  const spreadLoserOwner = state.ownership[region]?.[spreadLoser];
 
-  // Spread loser's owner is eliminated from this region
   if (spreadLoserOwner) {
     state.eliminated[region].add(spreadLoserOwner);
   }
 
-  // Steal rule: if spread winner != game winner,
-  // the spread winner's owner takes ownership of the game winner (advancing team)
-  if (spreadWinner !== gameWinner) {
-    // Transfer ownership of the advancing team to the spread winner's owner
-    if (spreadWinnerOwner) {
-      state.ownership[region][gameWinner] = spreadWinnerOwner;
-    }
+  if (spreadWinner !== gameWinner && spreadWinnerOwner) {
+    state.ownership[region][gameWinner] = spreadWinnerOwner;
   }
 
-  // Award a round win to the spread winner's owner
   if (spreadWinnerOwner) {
-    state.roundsWon[spreadWinnerOwner] = (state.roundsWon[spreadWinnerOwner] || 0) + 1;
+    state.roundsWon[spreadWinnerOwner] =
+      (state.roundsWon[spreadWinnerOwner] || 0) + 1;
   }
 
-  // Advance the actual game winner into the next round
   advanceWinner(region, round, idx, gameWinner);
 }
 
@@ -1416,17 +1414,18 @@ function openModalById(region, round, idx) {
 function openResultModal(matchup, region, round, idx) {
   _modal = { matchup, region, round, idx };
 
-  // For completed games show the original owner (who had the team going into that game)
-  // For upcoming games show the current owner
-  const owner1 = m.result
-    ? (state.draft[Object.keys(state.draft).find(p => state.draft[p][region] === m.team1)]
-       || state.ownership[region]?.[m.team1] || '—')
-    : (state.ownership[region]?.[m.team1] || '—');
-  const owner2 = m.result
-    ? (state.draft[Object.keys(state.draft).find(p => state.draft[p][region] === m.team2)]
-       || state.ownership[region]?.[m.team2] || '—')
-    : (state.ownership[region]?.[m.team2] || '—');
-  const spread = matchup.spread;
+  const owner1 = matchup.result
+    ? (matchup.owner1 || '—')
+    : (state.ownership[region]?.[matchup.team1] || '—');
+
+  const owner2 = matchup.result
+    ? (matchup.owner2 || '—')
+    : (state.ownership[region]?.[matchup.team2] || '—');
+
+  const spreadToShow =
+    (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
+      ? matchup.lockedSpread
+      : matchup.spread;
 
   document.getElementById('modal-title').textContent =
     `${region} — ${ROUND_NAMES[round]}`;
@@ -1435,13 +1434,12 @@ function openResultModal(matchup, region, round, idx) {
     <strong>${matchup.team1}</strong> (${owner1})
     vs
     <strong>${matchup.team2}</strong> (${owner2})<br>
-    <span class="text-accent">Spread: ${spread !== null ? spread : 'Not set — enter manually'}</span>
+    <span class="text-accent">Spread: ${spreadToShow !== null && spreadToShow !== undefined ? spreadToShow : 'Not set — enter manually'}</span>
   `;
 
   document.getElementById('label-score1').textContent = matchup.team1 + ' Score';
   document.getElementById('label-score2').textContent = matchup.team2 + ' Score';
 
-  // Pre-fill existing result if editing
   const res = matchup.liveScore || matchup.result;
   document.getElementById('score1').value = res?.score1 ?? '';
   document.getElementById('score2').value = res?.score2 ?? '';
@@ -1458,18 +1456,27 @@ function closeModal() {
 // Called on every keystroke in the score inputs — shows live preview
 function previewResult() {
   if (!_modal) return;
+
   const { matchup, region } = _modal;
   const s1 = parseFloat(document.getElementById('score1').value);
   const s2 = parseFloat(document.getElementById('score2').value);
 
   const prev = document.getElementById('modal-preview');
-  if (isNaN(s1) || isNaN(s2)) { prev.style.display = 'none'; return; }
+  if (isNaN(s1) || isNaN(s2)) {
+    prev.style.display = 'none';
+    return;
+  }
 
-  const covered = didCoverSpread(s1, s2, matchup.spread);
-  const winner  = covered ? matchup.team1 : matchup.team2;
-  const loser   = covered ? matchup.team2 : matchup.team1;
+  const spreadToUse =
+    (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
+      ? matchup.lockedSpread
+      : matchup.spread;
+
+  const covered = didCoverSpread(s1, s2, spreadToUse);
+  const winner = covered ? matchup.team1 : matchup.team2;
+  const loser = covered ? matchup.team2 : matchup.team1;
   const wo = state.ownership[region]?.[winner] || '—';
-  const lo = state.ownership[region]?.[loser]  || '—';
+  const lo = state.ownership[region]?.[loser] || '—';
 
   prev.style.display = 'block';
   prev.innerHTML = `
@@ -1597,37 +1604,33 @@ function renderScoresPage() {
   const grid = document.getElementById('scores-grid');
   if (!grid) return;
 
-   if (!state.scoresCache?.length) {
+  if (!state.scoresCache?.length) {
     grid.innerHTML = `<div class="no-data">Tap Sync to load scores.</div>`;
     return;
   }
 
-  
-  
-  // Only show games where both teams are in our bracket
-  // Tournament starts March 18 2026 — ignore any games before that
   const TOURNEY_START = new Date('2026-03-17T00:00:00Z');
-
-  // All First Four team names so they pass the filter
   const firstFourTeams = FIRST_FOUR.flatMap(f => [f.team1, f.team2]);
 
   const bracketGames = state.scoresCache.filter(game => {
     const gameDate = new Date(game.commence_time);
     if (gameDate < TOURNEY_START) return false;
 
-    // Check First Four games first
-    const isFirstFour = firstFourTeams.some(t => teamsMatch(game.home_team, t)) &&
-                        firstFourTeams.some(t => teamsMatch(game.away_team, t));
+    const isFirstFour =
+      firstFourTeams.some(t => teamsMatch(game.home_team, t)) &&
+      firstFourTeams.some(t => teamsMatch(game.away_team, t));
+
     if (isFirstFour) return true;
 
-    // Regular tournament games
     const allActiveTeams = [
       ...Object.values(DEFAULT_TEAMS).flat(),
       ...FIRST_FOUR.map(f => f.team1),
       ...FIRST_FOUR.map(f => f.team2),
     ];
+
     const homeMatch = allActiveTeams.some(t => teamsMatch(game.home_team, t));
     const awayMatch = allActiveTeams.some(t => teamsMatch(game.away_team, t));
+
     return homeMatch && awayMatch;
   });
 
@@ -1640,69 +1643,30 @@ function renderScoresPage() {
   });
 
   grid.innerHTML = sorted.map(game => {
-    const scores   = game.scores || [];
-    const isLive   = !game.completed && scores.length > 0;
-    const isFinal  = game.completed;
-    const time     = new Date(game.commence_time).toLocaleString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-      hour: 'numeric', minute: '2-digit'
+    const scores = game.scores || [];
+    const isLive = !game.completed && scores.length > 0;
+    const isFinal = game.completed;
+    const time = new Date(game.commence_time).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
     });
 
-    // Status badge
     const statusBadge = isFinal
       ? `<span class="badge badge-final">Final</span>`
       : isLive
         ? `<span class="badge badge-live">Live</span>`
         : `<span style="color:var(--muted);font-size:11px">${time}</span>`;
 
-    // Check if this is a First Four game and find spread from bracket
-    const ffGame = FIRST_FOUR.find(f =>
-      (teamsMatch(game.home_team, f.team1) || teamsMatch(game.home_team, f.team2)) &&
-      (teamsMatch(game.away_team, f.team1) || teamsMatch(game.away_team, f.team2))
-    );
-
-    // Find spread by matching team names against bracket matchups
-    // Pull spread directly from bracket — already matched and stored
-    let spreadFav = '', spreadLine = '';
-    outer: for (const r of REGIONS) {
-      for (const round of [1,2,3,4,5,6]) {
-        for (const m of (state.bracket[r]?.[round] || []).filter(m => m != null)) {
-          if (m.spread === null || m.spread === undefined) continue;
-          if (!m.team1 || !m.team2) continue;
-          const idMatch   = m.gameId && m.gameId === game.id;
-          const homeIsT1  = teamsMatch(game.home_team, m.team1);
-          const homeIsT2  = teamsMatch(game.home_team, m.team2);
-          const awayIsT1  = teamsMatch(game.away_team, m.team1);
-          const awayIsT2  = teamsMatch(game.away_team, m.team2);
-          const nameMatch = (homeIsT1 && awayIsT2) || (homeIsT2 && awayIsT1);
-          if (!idMatch && !nameMatch) continue;
-          const favTeam = m.spread < 0 ? m.team1 : m.team2;
-          const parts   = (favTeam || '').split(' ');
-          const name    = parts.length > 1 && !isNaN(parts[0])
-                        ? parts.slice(1).join(' ') : favTeam;
-          spreadFav  = name;
-          spreadLine = `-${Math.abs(m.spread)}`;
-          break outer;
-        }
-      }
-    }
-    // If no spread found and it's a First Four game, pull from the bracket slot it feeds into
-     if (!spreadFav && ffGame && ffGame.spread !== undefined && ffGame.spread !== null) {
-      const favTeam = ffGame.spread < 0 ? ffGame.team1 : ffGame.team2;
-      const parts   = (favTeam || '').split(' ');
-      const name    = parts.length > 1 && !isNaN(parts[0])
-                    ? parts.slice(1).join(' ') : favTeam;
-      spreadFav  = name;
-      spreadLine = `-${Math.abs(ffGame.spread)}`;
-    }
-
-    // Team rows
     const buildRow = (teamName, scoreObj) => {
-      const pts     = scoreObj?.score ?? '—';
-      const owner   = findOwner(teamName);
-      const parts   = (teamName || '').split(' ');
-      const seed    = parts.length > 1 && !isNaN(parts[0]) ? parts[0] : '';
-      const name    = seed ? parts.slice(1).join(' ') : teamName;
+      const pts = scoreObj?.score ?? '—';
+      const owner = findOwner(teamName);
+      const parts = (teamName || '').split(' ');
+      const seed = parts.length > 1 && !isNaN(parts[0]) ? parts[0] : '';
+      const name = seed ? parts.slice(1).join(' ') : teamName;
+
       return `
         <div class="score-row">
           <div style="display:flex;align-items:center;gap:8px">
@@ -1723,13 +1687,6 @@ function renderScoresPage() {
       <div class="score-card ${isFinal ? 'final-game' : isLive ? 'live-game' : ''}">
         <div class="score-card-header">
           ${statusBadge}
-          ${spreadFav
-            ? `<span style="font-size:12px">
-                <span style="color:var(--muted)">Spread: </span>
-                <span style="color:var(--accent);font-weight:700">${spreadFav} ${spreadLine}</span>
-               </span>`
-            : `<span style="color:var(--muted);font-size:11px">Spread pending</span>`
-          }
         </div>
         ${buildRow(game.away_team, a)}
         ${buildRow(game.home_team, h)}
