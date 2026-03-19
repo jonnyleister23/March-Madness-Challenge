@@ -533,7 +533,7 @@ function buildRoundHTML(round) {
     const color    = REGION_COLORS[region];
 
     const matchupCards = matchups.length
-      ? matchups.map((m, idx) => buildMatchupCard(m, region, round, idx)).join('')
+      ? matchups.filter(m => m != null).map((m, idx) => buildMatchupCard(m, region, round, idx)).join('')
       : `<div class="tbd-card">No matchups yet — advance previous round first.</div>`;
 
     return `
@@ -548,6 +548,7 @@ function buildRoundHTML(round) {
 }
 
 function buildMatchupCard(m, region, round, idx) {
+  if (!m) return '';
   // If game has been played, show who owned the team going into that game
   // If game hasn't been played yet, show current owner
   const owner1 = m.result ? (m.owner1 || '—') : (state.ownership[region]?.[m.team1] || '—');
@@ -1665,7 +1666,7 @@ function renderScoresPage() {
     let spreadFav = '', spreadLine = '';
     outer: for (const r of REGIONS) {
       for (const round of [1,2,3,4,5,6]) {
-        for (const m of (state.bracket[r]?.[round] || [])) {
+        for (const m of (state.bracket[r]?.[round] || []).filter(m => m != null)) {
           if (m.spread === null || m.spread === undefined) continue;
           if (!m.team1 || !m.team2) continue;
           const idMatch   = m.gameId && m.gameId === game.id;
