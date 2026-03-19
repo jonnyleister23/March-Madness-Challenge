@@ -316,6 +316,15 @@ const R1_PAIRS = [
 // Human-readable round names — used in headers and logs
 const ROUND_NAMES = {1:'Round of 64',2:'Round of 32',3:'Sweet 16',4:'Elite Eight',5:'Final Four',6:'Championship'};
 
+const MANUAL_LOCKED_SPREADS = {
+  'Tennessee|Miami OH': -18.5,
+  'Texas|BYU': -3.5,
+  'Michigan|Howard': -21.5,
+  'Virginia|Wright St': -18.5,
+  'Alabama|Hofstra': -11.5,
+  'Kentucky|Santa Clara': -3.5
+};
+
 const SYNC_COOLDOWN_MS = 300000; // 5 minutes
 let lastSyncAttempt = parseInt(localStorage.getItem('lastSyncAttempt') || '0');
 /* ==============================================================
@@ -1082,6 +1091,25 @@ function matchSpreadsTobracket(games) {
           const t2isAway = teamsMatch(away, matchup.team2);
 
           if (!((t1isHome && t2isAway) || (t1isAway && t2isHome))) return;
+          // 🔒 MANUAL LOCK OVERRIDE (PREVENTS LIVE SPREADS)
+          const key1 = `${matchup.team1}|${matchup.team2}`;
+          const key2 = `${matchup.team2}|${matchup.team1}`;
+
+          if (MANUAL_LOCKED_SPREADS[key1] !== undefined) {
+            matchup.lockedSpread = MANUAL_LOCKED_SPREADS[key1];
+            matchup.spread = matchup.lockedSpread;
+            matchup.gameId = game.id;
+            return;
+          }
+
+          if (MANUAL_LOCKED_SPREADS[key2] !== undefined) {
+            matchup.lockedSpread = -MANUAL_LOCKED_SPREADS[key2];
+            matchup.spread = matchup.lockedSpread;
+            matchup.gameId = game.id;
+            return;
+          }
+
+          
 
           const latestSpread = t1isHome ? homeSpread : -homeSpread;
 
