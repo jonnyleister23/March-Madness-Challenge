@@ -289,7 +289,7 @@ const DEFAULT_TEAMS = {
   West: [
     '1 Arizona',       '2 Purdue',          '3 Gonzaga',        '4 Arkansas',
     '5 Wisconsin',     '6 BYU',             '7 Miami FL',       '8 Villanova',
-    '9 Utah St',       '10 Missouri',       '11 NC State',      '12 High Point',
+    '9 Utah St',       '10 Missouri',       '11 Texas',      '12 High Point',
     '13 Hawaii',       '14 Kennesaw St',    '15 Queens',        '16 LIU'
   ],
   Midwest: [
@@ -445,10 +445,6 @@ function showPage(id) {
 // First Four games — each entry defines the two teams playing for a bracket slot
 // winner automatically fills the TBD slot in that region
 const FIRST_FOUR = [
-  { game:'West-11',    team1:'11 Texas',        team2:'11 NC State',   region:'West',    bracketSlot:'11 NC State',    owner:'Carson V' },
-  { game:'South-16',   team1:'16 Prairie View',  team2:'16 Lehigh',     region:'South',   bracketSlot:'16 Prairie View', owner:'Ryder'    },
-  { game:'Midwest-11', team1:'11 SMU',           team2:'11 Miami OH',   region:'Midwest', bracketSlot:'11 SMU',         owner:'Jolly'    },
-  { game:'Midwest-16', team1:'16 UMBC',          team2:'16 Howard',     region:'Midwest', bracketSlot:'16 Howard',      owner:'Hopp'     },
 ];
 /* ==============================================================
    BRACKET CONSTANTS
@@ -558,24 +554,8 @@ function buildMatchupCard(m, region, round, idx) {
 
   if (isTBD1 && isTBD2) return `<div class="tbd-card">TBD</div>`;
 
-  const getFFLabel = (teamSlot) => {
-    const ff = FIRST_FOUR.find(f => f.bracketSlot === teamSlot);
-    if (!ff) return teamSlot;
-    return ff.team1.replace(/^\d+\s+/,'') + '/' + ff.team2.replace(/^\d+\s+/,'');
-  };
-
-  const display1 = isTBD1 ? 'TBD' : getFFLabel(m.team1);
-  const display2 = isTBD2 ? 'TBD' : getFFLabel(m.team2);
-
-  // For single TBD slot, show the First Four matchup label
-  if (isTBD1) {
-    const ff = FIRST_FOUR.find(f => f.region === region && DEFAULT_TEAMS[region].findIndex(t => t === m.team2) === f.seed - 1);
-    if (ff) m = { ...m, team1: ff.team1 + '/' + ff.team2.replace(/^\d+\s+/,'') };
-  }
-  if (isTBD2) {
-    const ff = FIRST_FOUR.find(f => f.region === region);
-    if (ff) m = { ...m, team2: ff.team1 + '/' + ff.team2.replace(/^\d+\s+/,'') };
-  }
+  const display1 = isTBD1 ? 'TBD' : m.team1;
+  const display2 = isTBD2 ? 'TBD' : m.team2;
 
   // Determine won/lost states
   const state1 = m.result
@@ -1157,25 +1137,6 @@ function matchSpreadsTobracket(games) {
       });
     });
   });
-
-  // First Four spreads
-  games.forEach(game => {
-    const ff = FIRST_FOUR.find(f =>
-      (teamsMatch(game.home_team, f.team1) || teamsMatch(game.home_team, f.team2)) &&
-      (teamsMatch(game.away_team, f.team1) || teamsMatch(game.away_team, f.team2))
-    );
-    if (!ff) return;
-
-    const bk = game.bookmakers?.[0];
-    const mkt = bk?.markets?.find(m => m.key === 'spreads');
-    if (!mkt) return;
-
-    const t1Outcome = mkt.outcomes?.find(o => teamsMatch(o.name, ff.team1));
-    if (t1Outcome) {
-      ff.spread = t1Outcome.point;
-      ff.gameId = game.id;
-    }
-  });
 }
 
 
@@ -1233,35 +1194,6 @@ function matchScoresToBracket(games) {
           }
         });
       });
-    });
-  });
-  // Auto-fill First Four winners into bracket TBD slots
-  // Auto-fill First Four winners into bracket TBD slots
-  FIRST_FOUR.forEach(ff => {
-    const game = games.find(g =>
-      (teamsMatch(g.home_team, ff.team1) || teamsMatch(g.home_team, ff.team2)) &&
-      (teamsMatch(g.away_team, ff.team1) || teamsMatch(g.away_team, ff.team2))
-    );
-    if (!game || !game.completed) return;
-
-    const scores    = game.scores || [];
-    const homeScore = parseFloat(scores.find(s => s.name === game.home_team)?.score);
-    const awayScore = parseFloat(scores.find(s => s.name === game.away_team)?.score);
-    if (isNaN(homeScore) || isNaN(awayScore)) return;
-
-    const winnerApi  = homeScore > awayScore ? game.home_team : game.away_team;
-    const winnerName = teamsMatch(winnerApi, ff.team1) ? ff.team1 : ff.team2;
-
-    // Fill the specific bracketSlot with the winner
-    (state.bracket[ff.region]?.[1] || []).forEach(matchup => {
-      if (matchup.team1 === ff.bracketSlot) {
-        matchup.team1 = winnerName;
-        if (ff.owner) state.ownership[ff.region][winnerName] = ff.owner;
-      }
-      if (matchup.team2 === ff.bracketSlot) {
-        matchup.team2 = winnerName;
-        if (ff.owner) state.ownership[ff.region][winnerName] = ff.owner;
-      }
     });
   });
 }
@@ -1660,6 +1592,61 @@ function renderScoresPage() {
         ? `<span class="badge badge-live">Live</span>`
         : `<span style="color:var(--muted);font-size:11px">${time}</span>`;
 
+    // Pull spread from the bracket only
+    let spreadText = 'Spread pending';
+
+    outer:
+    for (const region of REGIONS) {
+      for (const round of [1,2,3,4,5,6]) {
+        for (const matchup of (state.bracket[region]?.[round] || [])) {
+          if (!matchup || !matchup.team1 || !matchup.team2) continue;
+
+          const idMatch = matchup.gameId && matchup.gameId === game.id;
+          const nameMatch =
+            (teamsMatch(game.home_team, matchup.team1) && teamsMatch(game.away_team, matchup.team2)) ||
+            (teamsMatch(game.home_team, matchup.team2) && teamsMatch(game.away_team, matchup.team1));
+
+          if (!idMatch && !nameMatch) continue;
+
+          const spreadVal =
+            (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
+              ? matchup.lockedSpread
+              : matchup.spread;
+
+          if (spreadVal !== undefined && spreadVal !== null) {
+            const favTeam = spreadVal < 0 ? matchup.team1 : matchup.team2;
+            const dogTeam = spreadVal < 0 ? matchup.team2 : matchup.team1;
+
+            const stripSeed = team => {
+              const parts = (team || '').split(' ');
+              return parts.length > 1 && !isNaN(parts[0]) ? parts.slice(1).join(' ') : team;
+            };
+
+            spreadText = `${stripSeed(favTeam)} ${spreadVal}`;
+          }
+
+          break outer;
+        }
+      }
+    }
+
+    // First Four fallback
+    if (spreadText === 'Spread pending') {
+      const ffGame = FIRST_FOUR.find(f =>
+        (teamsMatch(game.home_team, f.team1) || teamsMatch(game.home_team, f.team2)) &&
+        (teamsMatch(game.away_team, f.team1) || teamsMatch(game.away_team, f.team2))
+      );
+
+      if (ffGame && ffGame.spread !== undefined && ffGame.spread !== null) {
+        const favTeam = ffGame.spread < 0 ? ffGame.team1 : ffGame.team2;
+        const stripSeed = team => {
+          const parts = (team || '').split(' ');
+          return parts.length > 1 && !isNaN(parts[0]) ? parts.slice(1).join(' ') : team;
+        };
+        spreadText = `${stripSeed(favTeam)} ${ffGame.spread}`;
+      }
+    }
+
     const buildRow = (teamName, scoreObj) => {
       const pts = scoreObj?.score ?? '—';
       const owner = findOwner(teamName);
@@ -1687,6 +1674,7 @@ function renderScoresPage() {
       <div class="score-card ${isFinal ? 'final-game' : isLive ? 'live-game' : ''}">
         <div class="score-card-header">
           ${statusBadge}
+          <span style="font-size:12px;color:var(--accent);font-weight:700">${spreadText}</span>
         </div>
         ${buildRow(game.away_team, a)}
         ${buildRow(game.home_team, h)}
@@ -1835,21 +1823,21 @@ function loadHardcodedDraft() {
                    'Nate','Ben','Jolly','Garrett'];
 
   const draft = {
-    'Ryder':   { East:'1 Duke',            West:'9 Utah St',      South:'TBD',             Midwest:'4 Alabama'       },
-    'Hopp':    { East:'2 UConn',           West:'15 Queens',      South:'4 Nebraska',      Midwest:'TBD'             },
+    'Ryder':   { East:'1 Duke',            West:'9 Utah St',      South:'16 Prairie View', Midwest:'4 Alabama'       },
+    'Hopp':    { East:'2 UConn',           West:'15 Queens',      South:'4 Nebraska',      Midwest:'16 Howard'       },
     'Easton':  { East:'3 Michigan St',     West:'6 BYU',          South:'3 Illinois',      Midwest:'10 Santa Clara'  },
     'Quinton': { East:'4 Kansas',          West:'8 Villanova',    South:'11 VCU',          Midwest:'7 Kentucky'      },
     'Smitty':  { East:'5 St Johns',        West:'16 LIU',         South:'12 McNeese',      Midwest:'3 Virginia'      },
     'Connor':  { East:'6 Louisville',      West:'12 High Point',  South:'13 Troy',         Midwest:'12 Akron'        },
     'Tryston': { East:'7 UCLA',            West:'3 Gonzaga',      South:'2 Houston',       Midwest:'13 Hofstra'      },
-    'Carson V':{ East:'8 Ohio St',         West:'TBD',            South:'1 Florida',       Midwest:'14 Wright St'    },
+    'Carson V':{ East:'8 Ohio St',         West:'11 Texas',       South:'1 Florida',       Midwest:'14 Wright St'    },
     'Drew':    { East:'9 TCU',             West:'10 Missouri',    South:'6 North Carolina', Midwest:'8 Georgia'      },
     'Aaron':   { East:'10 UCF',            West:'2 Purdue',       South:'8 Clemson',       Midwest:'9 Saint Louis'   },
     'Jace':    { East:'11 South Florida',  West:'14 Kennesaw St', South:'9 Iowa',          Midwest:'5 Texas Tech'    },
     'Jonny':   { East:'12 Northern Iowa',  West:'1 Arizona',      South:'15 Idaho',        Midwest:'2 Iowa St'       },
     'Nate':    { East:'13 Cal Baptist',    West:'5 Wisconsin',    South:'7 Saint Marys',   Midwest:'15 Tennessee St' },
     'Ben':     { East:'14 North Dakota St',West:'13 Hawaii',      South:'14 Penn',         Midwest:'1 Michigan'      },
-    'Jolly':   { East:'15 Furman',         West:'7 Miami FL',     South:'5 Vanderbilt',    Midwest:'TBD'             },
+    'Jolly':   { East:'15 Furman',         West:'7 Miami FL',     South:'5 Vanderbilt',    Midwest:'11 Miami OH'             },
     'Garrett': { East:'16 Siena',          West:'4 Arkansas',     South:'10 Texas A&M',    Midwest:'6 Tennessee'     },
   };
 
