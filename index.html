@@ -1341,11 +1341,12 @@ function processResult(region, round, idx, score1, score2) {
   const spreadLoser  = team1Covered ? matchup.team2 : matchup.team1;
 
   const outrightWinner = score1 > score2 ? matchup.team1 : matchup.team2;
+  const outrightLoser  = score1 > score2 ? matchup.team2 : matchup.team1;
 
   matchup.result = {
     score1,
     score2,
-    winner: spreadWinner,
+    winner: outrightWinner,
     spreadWinner,
     outrightWinner
   };
@@ -1356,18 +1357,19 @@ function processResult(region, round, idx, score1, score2) {
   const spreadWinnerOwner = state.ownership[region]?.[spreadWinner];
   const spreadLoserOwner  = state.ownership[region]?.[spreadLoser];
 
+  // Loser against the spread is eliminated from this region
   if (spreadLoserOwner) {
     state.eliminated[region].add(spreadLoserOwner);
   }
 
-  // Winner of the bracket matchup is the team that covered
-  if (spreadWinnerOwner) {
-    state.ownership[region][spreadWinner] = spreadWinnerOwner;
+  // The outright winner advances, but its ownership goes to whoever won ATS
+  if (spreadWinnerOwner && outrightWinner) {
+    state.ownership[region][outrightWinner] = spreadWinnerOwner;
     state.roundsWon[spreadWinnerOwner] =
       (state.roundsWon[spreadWinnerOwner] || 0) + 1;
   }
 
-  advanceWinner(region, round, idx, spreadWinner);
+  advanceWinner(region, round, idx, outrightWinner);
 }
 
 
@@ -1508,16 +1510,18 @@ function previewResult() {
       : matchup.spread;
 
   const covered = didCoverSpread(s1, s2, spreadToUse);
-  const winner = covered ? matchup.team1 : matchup.team2;
-  const loser = covered ? matchup.team2 : matchup.team1;
-  const wo = state.ownership[region]?.[winner] || '—';
-  const lo = state.ownership[region]?.[loser] || '—';
+  const spreadWinner = covered ? matchup.team1 : matchup.team2;
+  const spreadLoser = covered ? matchup.team2 : matchup.team1;
+  const outrightWinner = s1 > s2 ? matchup.team1 : matchup.team2;
+
+  const winningOwner = state.ownership[region]?.[spreadWinner] || '—';
+  const losingOwner = state.ownership[region]?.[spreadLoser] || '—';
 
   prev.style.display = 'block';
   prev.innerHTML = `
-    <span class="text-success">✓ ${winner}</span> covered the spread.<br>
-    <strong>${wo}</strong> advances in the ${region} region.<br>
-    <span class="text-danger">${lo} is eliminated from ${region}.</span>
+    <span class="text-success">✓ ${spreadWinner}</span> covered the spread.<br>
+    <strong>${winningOwner}</strong> takes <strong>${outrightWinner}</strong> in the ${region} region.<br>
+    <span class="text-danger">${losingOwner} is eliminated from ${region}.</span>
   `;
 }
 
