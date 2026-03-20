@@ -317,10 +317,10 @@ const R1_PAIRS = [
 const ROUND_NAMES = {1:'Round of 64',2:'Round of 32',3:'Sweet 16',4:'Elite Eight',5:'Final Four',6:'Championship'};
 
 const MANUAL_LOCKED_SPREADS = {
-  'North Carolina|VCU': -2.5,
-  'Michigan|Howard': -31.5,
-  'BYU|Texas': -2.5,
-  'Saint Marys|Texas A&M': -3.5
+  '6 North Carolina|11 VCU': -2.5,
+  '1 Michigan|16 Howard': -31.5,
+  '6 BYU|11 Texas': -2.5,
+  '7 Saint Marys|10 Texas A&M': -3.5
 };
 
 const SYNC_COOLDOWN_MS = 300000; // 5 minutes
@@ -1082,6 +1082,7 @@ function matchSpreadsTobracket(games) {
       [1,2,3,4,5,6].forEach(round => {
         (state.bracket[region]?.[round] || []).forEach(matchup => {
           if (!matchup || matchup.result) return;
+          if (!matchup.team1 || !matchup.team2 || matchup.team1 === 'TBD' || matchup.team2 === 'TBD') return;
 
           const t1isHome = teamsMatch(home, matchup.team1);
           const t1isAway = teamsMatch(away, matchup.team1);
@@ -1089,27 +1090,26 @@ function matchSpreadsTobracket(games) {
           const t2isAway = teamsMatch(away, matchup.team2);
 
           if (!((t1isHome && t2isAway) || (t1isAway && t2isHome))) return;
-          // 🔒 MANUAL LOCK OVERRIDE (PREVENTS LIVE SPREADS)
+
+          matchup.gameId = game.id;
+
+          // MANUAL LOCK OVERRIDE
           const key1 = `${matchup.team1}|${matchup.team2}`;
           const key2 = `${matchup.team2}|${matchup.team1}`;
 
           if (MANUAL_LOCKED_SPREADS[key1] !== undefined) {
             matchup.lockedSpread = MANUAL_LOCKED_SPREADS[key1];
             matchup.spread = matchup.lockedSpread;
-            matchup.gameId = game.id;
             return;
           }
 
           if (MANUAL_LOCKED_SPREADS[key2] !== undefined) {
             matchup.lockedSpread = -MANUAL_LOCKED_SPREADS[key2];
             matchup.spread = matchup.lockedSpread;
-            matchup.gameId = game.id;
             return;
           }
 
-          
-
-          const latestSpread = t1isHome ? homeSpread : -homeSpread;
+          const pregameSpread = t1isHome ? homeSpread : -homeSpread;
 
           const now = new Date();
           const gameTime = new Date(game.commence_time);
@@ -1146,19 +1146,18 @@ function matchSpreadsTobracket(games) {
 
           const locked = sameGameDayET && afterLockTimeET;
 
-          matchup.gameId = game.id;
-
+          // Before lock: keep updating
           if (!locked) {
-            matchup.spread = latestSpread;
-            matchup.lockedSpread = latestSpread;
+            matchup.spread = pregameSpread;
+            matchup.lockedSpread = pregameSpread;
             return;
           }
 
-          if (matchup.lockedSpread === null || matchup.lockedSpread === undefined) {
-            matchup.lockedSpread = latestSpread;
-          }
-
-          matchup.spread = matchup.lockedSpread;
+          // After lock: NEVER capture a new spread
+          matchup.spread =
+            (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
+              ? matchup.lockedSpread
+              : null;
         });
       });
     });
