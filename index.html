@@ -916,7 +916,31 @@ async function apiGet(params) {
 
   return data;
 }
+function resetTournamentProgressFromDraft() {
+  state.ownership = {};
+  state.eliminated = {};
+  state.roundsWon = {};
 
+  const playerNames = state.players.map(p => p.name);
+
+  playerNames.forEach(name => {
+    state.roundsWon[name] = 0;
+  });
+
+  REGIONS.forEach(region => {
+    state.ownership[region] = {};
+    state.eliminated[region] = new Set();
+
+    playerNames.forEach(name => {
+      const pick = state.draft[name]?.[region];
+      if (pick && pick !== 'TBD') {
+        state.ownership[region][pick] = name;
+      }
+    });
+  });
+
+  initBracket();
+}
 async function fetchAndSync() {
   const now = Date.now();
 
@@ -970,8 +994,6 @@ async function fetchAndSync() {
         throw new Error(oddsData.message || 'Bad odds response');
       }
 
-      // First pass: assign spreads to matchups that already exist
-      matchSpreadsTobracket(oddsData);
       state.lastOddsFetch = now;
       state.lastOddsData = oddsData;
     } else if (Array.isArray(state.lastOddsData)) {
@@ -990,10 +1012,18 @@ async function fetchAndSync() {
     state.scoresCache = scoresData;
     state.lastFetch = new Date().toISOString();
 
-    // This may create new next-round matchups
+    // IMPORTANT: rebuild everything from draft every sync
+    resetTournamentProgressFromDraft();
+
+    // First pass: spreads onto fresh bracket
+    if (Array.isArray(oddsData)) {
+      matchSpreadsTobracket(oddsData);
+    }
+
+    // Reprocess all live/final games from scratch
     matchScoresToBracket(scoresData);
 
-    // Second pass: now that winners advanced, try matching spreads again
+    // Second pass: spreads for newly created next-round matchups
     if (Array.isArray(oddsData)) {
       matchSpreadsTobracket(oddsData);
     }
@@ -1032,7 +1062,6 @@ async function fetchAndSync() {
     }
   }
 }
-
 /* ==============================================================
    TEAM NAME MATCHING
    ==============================================================
