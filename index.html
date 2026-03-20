@@ -1379,7 +1379,7 @@ function advanceWinner(region, round, idx, winner) {
     if (!state.bracket[f4.storeIn][5]) state.bracket[f4.storeIn][5] = [];
     if (!state.bracket[f4.storeIn][5][0]) {
       state.bracket[f4.storeIn][5][0] = {
-        team1: 'TBD', team2: 'TBD', spread: null, result: null, gameId: null
+        team1: 'TBD', team2: 'TBD', spread: null, lockedSpread: null, result: null, gameId: null
       };
     }
     if (f4.position === 0) state.bracket[f4.storeIn][5][0].team1 = winner;
@@ -1396,7 +1396,7 @@ function advanceWinner(region, round, idx, winner) {
     if (!state.bracket['East'][6]) state.bracket['East'][6] = [];
     if (!state.bracket['East'][6][0]) {
       state.bracket['East'][6][0] = {
-        team1: 'TBD', team2: 'TBD', spread: null, result: null, gameId: null
+        team1: 'TBD', team2: 'TBD', spread: null, lockedSpread: null, result: null, gameId: null
       };
     }
     // East/South winner = team1, West/Midwest winner = team2
