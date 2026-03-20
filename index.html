@@ -913,7 +913,6 @@ async function fetchAndSync() {
     const btns = document.querySelectorAll('[onclick="fetchAndSync()"]');
     btns.forEach(b => { b.disabled = true; });
 
-    // Count down every second
     let secsLeft = Math.ceil(remainingMs / 1000);
     btns.forEach(b => { b.textContent = `⏳ ${secsLeft}s`; });
 
@@ -940,11 +939,13 @@ async function fetchAndSync() {
   });
 
   try {
+    let oddsData = null;
+
     const shouldFetchOdds =
       !state.lastOddsFetch || (now - state.lastOddsFetch > 10 * 60 * 1000);
 
     if (shouldFetchOdds) {
-      const oddsData = await apiGet({
+      oddsData = await apiGet({
         type: 'odds',
         regions: 'us',
         markets: 'spreads',
@@ -956,8 +957,12 @@ async function fetchAndSync() {
         throw new Error(oddsData.message || 'Bad odds response');
       }
 
+      // First pass: assign spreads to matchups that already exist
       matchSpreadsTobracket(oddsData);
       state.lastOddsFetch = now;
+      state.lastOddsData = oddsData;
+    } else if (Array.isArray(state.lastOddsData)) {
+      oddsData = state.lastOddsData;
     }
 
     const scoresData = await apiGet({
@@ -972,7 +977,13 @@ async function fetchAndSync() {
     state.scoresCache = scoresData;
     state.lastFetch = new Date().toISOString();
 
+    // This may create new next-round matchups
     matchScoresToBracket(scoresData);
+
+    // Second pass: now that winners advanced, try matching spreads again
+    if (Array.isArray(oddsData)) {
+      matchSpreadsTobracket(oddsData);
+    }
 
     saveState();
     renderBracket();
@@ -1008,7 +1019,6 @@ async function fetchAndSync() {
     }
   }
 }
-
 
 /* ==============================================================
    TEAM NAME MATCHING
