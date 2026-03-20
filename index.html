@@ -1311,37 +1311,36 @@ function processResult(region, round, idx, score1, score2) {
 
   const team1Covered = didCoverSpread(score1, score2, spreadToUse);
   const spreadWinner = team1Covered ? matchup.team1 : matchup.team2;
-  const spreadLoser = team1Covered ? matchup.team2 : matchup.team1;
+  const spreadLoser  = team1Covered ? matchup.team2 : matchup.team1;
 
-  const gameWinner = score1 > score2 ? matchup.team1 : matchup.team2;
+  const outrightWinner = score1 > score2 ? matchup.team1 : matchup.team2;
 
   matchup.result = {
     score1,
     score2,
-    winner: gameWinner,
-    spreadWinner
+    winner: spreadWinner,
+    spreadWinner,
+    outrightWinner
   };
 
   matchup.owner1 = state.ownership[region]?.[matchup.team1] || '—';
   matchup.owner2 = state.ownership[region]?.[matchup.team2] || '—';
 
   const spreadWinnerOwner = state.ownership[region]?.[spreadWinner];
-  const spreadLoserOwner = state.ownership[region]?.[spreadLoser];
+  const spreadLoserOwner  = state.ownership[region]?.[spreadLoser];
 
   if (spreadLoserOwner) {
     state.eliminated[region].add(spreadLoserOwner);
   }
 
-  if (spreadWinner !== gameWinner && spreadWinnerOwner) {
-    state.ownership[region][gameWinner] = spreadWinnerOwner;
-  }
-
+  // Winner of the bracket matchup is the team that covered
   if (spreadWinnerOwner) {
+    state.ownership[region][spreadWinner] = spreadWinnerOwner;
     state.roundsWon[spreadWinnerOwner] =
       (state.roundsWon[spreadWinnerOwner] || 0) + 1;
   }
 
-  advanceWinner(region, round, idx, gameWinner);
+  advanceWinner(region, round, idx, spreadWinner);
 }
 
 
