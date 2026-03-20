@@ -389,6 +389,7 @@ let lastSyncAttempt = parseInt(localStorage.getItem('lastSyncAttempt') || '0');
 let state = {
   apiKey:     '',
   lastOddsFetch: null,
+  lastOddsData: null,
   players:    [],
   draft:      {},
   ownership:  {},
@@ -1319,7 +1320,7 @@ function advanceWinner(region, round, idx, winner) {
     const position = idx % 2;
     if (!state.bracket[region][nextRound][slot]) {
       state.bracket[region][nextRound][slot] = {
-        team1: 'TBD', team2: 'TBD', spread: null, result: null, gameId: null
+        team1: 'TBD', team2: 'TBD', spread: null, lockedSpread: null, result: null, gameId: null
       };
     }
     if (position === 0) state.bracket[region][nextRound][slot].team1 = winner;
