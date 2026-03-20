@@ -1015,6 +1015,8 @@ async function fetchAndSync() {
     // IMPORTANT: rebuild everything from draft every sync
     resetTournamentProgressFromDraft();
 
+    applyManualLockedSpreads();
+
     // First pass: spreads onto fresh bracket
     if (Array.isArray(oddsData)) {
       matchSpreadsTobracket(oddsData);
@@ -1113,6 +1115,31 @@ function teamsMatch(apiName, bracketName) {
   if (MAP[api] === bracket) return true;
 
   return false;
+}
+
+function applyManualLockedSpreads() {
+  REGIONS.forEach(region => {
+    [1,2,3,4,5,6].forEach(round => {
+      (state.bracket[region]?.[round] || []).forEach(matchup => {
+        if (!matchup || !matchup.team1 || !matchup.team2) return;
+
+        const key1 = `${matchup.team1}|${matchup.team2}`;
+        const key2 = `${matchup.team2}|${matchup.team1}`;
+
+        if (MANUAL_LOCKED_SPREADS[key1] !== undefined) {
+          matchup.lockedSpread = MANUAL_LOCKED_SPREADS[key1];
+          matchup.spread = matchup.lockedSpread;
+          return;
+        }
+
+        if (MANUAL_LOCKED_SPREADS[key2] !== undefined) {
+          matchup.lockedSpread = -MANUAL_LOCKED_SPREADS[key2];
+          matchup.spread = matchup.lockedSpread;
+          return;
+        }
+      });
+    });
+  });
 }
 
 
