@@ -1164,8 +1164,8 @@ function matchSpreadsTobracket(games) {
             nowParts.day === gameParts.day;
 
           const afterLockTimeET =
-            Number(nowParts.hour) > 11 ||
-            (Number(nowParts.hour) === 11 && Number(nowParts.minute) >= 0);
+            Number(nowParts.hour) > 12 ||
+            (Number(nowParts.hour) === 12 && Number(nowParts.minute) >= 0);
 
           const locked = sameGameDayET && afterLockTimeET;
 
