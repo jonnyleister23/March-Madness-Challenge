@@ -612,7 +612,7 @@ function buildMatchupCard(m, region, round, idx) {
   const safeM = JSON.stringify(m).replace(/\'/g, '&#39;').replace(/"/g, '&quot;');
 
   return `
-    <div class="matchup-card" onclick="openModalById('${region}', ${round}, ${idx})">
+    <div class="matchup-card">
       <div class="team-row ${state1}">
         <div class="seed-badge">${seed1}</div>
         <div class="team-info">
@@ -1330,6 +1330,7 @@ function didCoverSpread(score1, score2, spread) {
 // Process a completed game: determine winner, update ownership, eliminate loser's owner, advance
 function processResult(region, round, idx, score1, score2) {
   const matchup = state.bracket[region][round][idx];
+  if (!matchup) return;
 
   const spreadToUse =
     (matchup.lockedSpread !== undefined && matchup.lockedSpread !== null)
@@ -1341,7 +1342,6 @@ function processResult(region, round, idx, score1, score2) {
   const spreadLoser  = team1Covered ? matchup.team2 : matchup.team1;
 
   const outrightWinner = score1 > score2 ? matchup.team1 : matchup.team2;
-  const outrightLoser  = score1 > score2 ? matchup.team2 : matchup.team1;
 
   matchup.result = {
     score1,
@@ -1357,12 +1357,19 @@ function processResult(region, round, idx, score1, score2) {
   const spreadWinnerOwner = state.ownership[region]?.[spreadWinner];
   const spreadLoserOwner  = state.ownership[region]?.[spreadLoser];
 
-  // Loser against the spread is eliminated from this region
   if (spreadLoserOwner) {
     state.eliminated[region].add(spreadLoserOwner);
   }
 
-  // The outright winner advances, but its ownership goes to whoever won ATS
+  if (!state.ownership[region]) {
+    state.ownership[region] = {};
+  }
+
+  // Remove both teams from current ownership first
+  delete state.ownership[region][matchup.team1];
+  delete state.ownership[region][matchup.team2];
+
+  // Add back only the advancing team, owned by whoever won against the spread
   if (spreadWinnerOwner && outrightWinner) {
     state.ownership[region][outrightWinner] = spreadWinnerOwner;
     state.roundsWon[spreadWinnerOwner] =
